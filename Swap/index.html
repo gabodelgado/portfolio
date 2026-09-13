@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swap</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💱</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="card welcome-card" id="welcomeCard">
+    <div class="lang-switch">
+        <button class="lang-btn active" id="welcomeLangEs" onclick="setLang('es')">ES</button>
+        <button class="lang-btn" id="welcomeLangEn" onclick="setLang('en')">EN</button>
+    </div>
+
+    <div class="header">
+        <div class="icon">💱</div>
+        <h1 id="welcomeBrand">SWAP</h1>
+        <p data-i18n="welcomeTitle">¿En qué moneda piensas?</p>
+    </div>
+
+    <p class="welcome-sub" data-i18n="welcomeSub">Elige tu moneda local y la usaremos como punto de partida cada vez que abras la app.</p>
+
+    <div class="home-ccy-field">
+        <div class="ccy-dropdown" id="homeDropdown" style="width:100%;">
+            <div class="ccy-trigger" onclick="toggleDropdown('home')" style="width:100%;">
+                <span class="ccy-trigger-flag" id="homeTriggerFlag">🇺🇸</span>
+                <span class="ccy-trigger-text" id="homeTriggerText">USD</span>
+                <span class="ccy-trigger-chevron">▼</span>
+            </div>
+            <div class="ccy-panel" id="homePanel" style="width:100%;">
+                <input type="text" class="ccy-search" id="homeSearch" placeholder="Buscar..." oninput="filterList('home')">
+                <div class="ccy-list" id="homeList"></div>
+            </div>
+        </div>
+    </div>
+
+    <button class="welcome-btn" onclick="startSwap()" data-i18n="welcomeBtn">Comenzar →</button>
+</div>
+
+<div class="card hidden" id="mainCard">
+    <div class="lang-switch">
+        <button class="lang-btn active" id="langEs" onclick="setLang('es')">ES</button>
+        <button class="lang-btn" id="langEn" onclick="setLang('en')">EN</button>
+    </div>
+
+    <div class="header">
+        <div class="icon">💱</div>
+        <h1 data-i18n="title">CAMBIO DE DIVISAS</h1>
+        <p data-i18n="subtitle">Tasas de mercado en tiempo real, sin comisión</p>
+        <div class="live-badge-row">
+            <div class="live-badge" id="liveBadge"><span class="live-dot"></span><span id="liveText">TASA EN VIVO</span></div>
+            <button class="refresh-btn" id="refreshBtn" onclick="fetchLiveRates()" aria-label="Actualizar tasas / Refresh rates">⟳</button>
+        </div>
+    </div>
+
+    <div class="swap-box">
+        <div class="swap-label" data-i18n="youSend">Envías</div>
+        <div class="currency-row">
+            <div class="ccy-dropdown" id="fromDropdown">
+                <div class="ccy-trigger" onclick="toggleDropdown('from')">
+                    <span class="ccy-trigger-flag" id="fromTriggerFlag">🇺🇸</span>
+                    <span class="ccy-trigger-text" id="fromTriggerText">USD</span>
+                    <span class="ccy-trigger-chevron">▼</span>
+                </div>
+                <div class="ccy-panel" id="fromPanel">
+                    <input type="text" class="ccy-search" id="fromSearch" placeholder="Buscar..." oninput="filterList('from')">
+                    <div class="ccy-list" id="fromList"></div>
+                </div>
+            </div>
+            <div class="amount-wrap">
+                <input type="number" class="amount-input" id="amount" placeholder="0.00" value="100" min="0" step="0.01">
+            </div>
+        </div>
+    </div>
+    <div class="currency-name-hint" id="fromNameHint">Dólar EE.UU.</div>
+
+    <div class="swap-btn-wrap">
+        <div class="swap-btn" onclick="swapCurrencies()">⇅</div>
+    </div>
+
+    <div class="swap-box">
+        <div class="swap-label" data-i18n="theyReceive">Reciben</div>
+        <div class="currency-row">
+            <div class="ccy-dropdown" id="toDropdown">
+                <div class="ccy-trigger" onclick="toggleDropdown('to')">
+                    <span class="ccy-trigger-flag" id="toTriggerFlag">🇪🇺</span>
+                    <span class="ccy-trigger-text" id="toTriggerText">EUR</span>
+                    <span class="ccy-trigger-chevron">▼</span>
+                </div>
+                <div class="ccy-panel" id="toPanel">
+                    <input type="text" class="ccy-search" id="toSearch" placeholder="Buscar..." oninput="filterList('to')">
+                    <div class="ccy-list" id="toList"></div>
+                </div>
+            </div>
+            <div class="amount-wrap">
+                <input type="text" class="amount-input" id="convertedDisplay" readonly value="0.00">
+            </div>
+        </div>
+    </div>
+    <div class="currency-name-hint" id="toNameHint">Euro</div>
+
+    <div class="rate-info" id="rateInfo">1 USD = <span>0.9200 EUR</span></div>
+
+    <div class="result-box">
+        <div class="result-label" data-i18n="totalReceive">Total a recibir</div>
+        <div class="result-amount" id="finalResult">€0.00</div>
+        <div class="result-sub" data-i18n="noFees">Sin comisiones · Sin cargos ocultos · Tasa real</div>
+    </div>
+
+    <div class="timestamp" id="timestamp">Tasa actualizada hoy</div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

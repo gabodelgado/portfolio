@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apron</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="welcome-overlay" id="welcomeOverlay">
+    <div class="welcome-card">
+        <div class="lang-switch welcome-lang-switch">
+            <button class="lang-btn active" id="welcomeLangEs" onclick="setLang('es')">ES</button>
+            <button class="lang-btn" id="welcomeLangEn" onclick="setLang('en')">EN</button>
+        </div>
+        <div class="welcome-icon">🍽️</div>
+        <div class="welcome-brand" data-i18n="appTitle">🍽️ Apron</div>
+        <h1 data-i18n="welcomeTitle">¡Bienvenido!</h1>
+        <p data-i18n="welcomeSub">Ponle el nombre a tu restaurante y arma tu página de pedidos al instante con estos platos de muestra.</p>
+        <input type="text" id="restaurantNameInput" data-i18n-ph="welcomeNamePh" maxlength="40">
+        <div class="field-error" id="welcomeNameError" data-i18n="welcomeNameRequired">Escribe el nombre de tu restaurante</div>
+        <button class="welcome-btn" onclick="startRestaurant()" data-i18n="welcomeBtn">Comenzar →</button>
+    </div>
+</div>
+
+<div class="wrapper hidden" id="appWrapper">
+    <div class="lang-switch">
+        <button class="lang-btn active" id="langEs" onclick="setLang('es')">ES</button>
+        <button class="lang-btn" id="langEn" onclick="setLang('en')">EN</button>
+    </div>
+
+    <div class="top-header">
+        <h1><span id="restaurantNameDisplay">🍽️ Tu Restaurante</span> <button class="edit-name-btn" onclick="editRestaurantName()" data-i18n-title="editNameTitle" title="Cambiar nombre">✏️</button></h1>
+        <p data-i18n="subtitle">Selecciona los platos y calcula tu cuenta al instante</p>
+    </div>
+
+    <div class="layout">
+        <div class="panel">
+            <div class="panel-title"><span data-i18n="menuTitle">📋 Menú</span></div>
+            <div id="menuContainer"></div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-title"><span data-i18n="billTitle">🧾 Tu Cuenta</span></div>
+
+            <div class="order-type-zone">
+                <div class="order-type-title" data-i18n="orderTypeTitle">🚗 Tipo de pedido</div>
+                <div class="order-type-options">
+                    <button class="order-type-btn active" id="pickupBtn" onclick="setOrderType('pickup')">
+                        <span class="ot-icon">🏃</span><span data-i18n="pickup">Recoger</span><span class="ot-sub" data-i18n="pickupSub">Gratis</span>
+                    </button>
+                    <button class="order-type-btn" id="deliveryBtn" onclick="setOrderType('delivery')">
+                        <span class="ot-icon">🛵</span><span data-i18n="delivery">Delivery</span><span class="ot-sub" data-i18n="deliverySub">+$6.00</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="cart-list" id="cartList"><div class="empty" data-i18n="emptyCart">Aún no has agregado nada</div></div>
+
+            <div class="checkout-zone">
+                <div class="checkout-title" data-i18n="checkoutTitle">📇 Datos de contacto</div>
+                <div class="checkout-field">
+                    <label data-i18n="nameLabel">Nombre completo</label>
+                    <input type="text" id="custName" data-i18n-ph="namePh">
+                    <div class="field-error" id="nameError" data-i18n="nameRequired">Ingresa tu nombre</div>
+                </div>
+                <div class="checkout-field">
+                    <label data-i18n="phoneLabel">Número de teléfono</label>
+                    <input type="tel" id="custPhone" data-i18n-ph="phonePh">
+                    <div class="field-error" id="phoneError" data-i18n="phoneRequired">Ingresa tu teléfono</div>
+                </div>
+                <div class="checkout-field" id="addressField" style="display:none;">
+                    <label data-i18n="addressLabel">Dirección de entrega</label>
+                    <input type="text" id="custAddress" data-i18n-ph="addressPh">
+                    <div class="field-error" id="addressError" data-i18n="addressRequired">Ingresa tu dirección de entrega</div>
+                </div>
+            </div>
+
+            <div class="tip-zone">
+                <div class="tip-title" data-i18n="tipTitle">💚 Agregar propina</div>
+                <div class="tip-options">
+                    <button class="tip-btn" data-pct="0.15" onclick="setTip(0.15,this)">15%</button>
+                    <button class="tip-btn" data-pct="0.18" onclick="setTip(0.18,this)">18%</button>
+                    <button class="tip-btn" data-pct="0.2" onclick="setTip(0.20,this)">20%</button>
+                </div>
+                <div class="field-hint" data-i18n="tipHint">Escribe un monto exacto de propina en dólares (ej: 5.00)</div>
+                <input type="number" class="custom-tip" id="customTip" min="0" data-i18n-ph="customTip">
+            </div>
+
+            <div class="tip-zone">
+                <div class="tip-title" data-i18n="taxRateTitle">🧾 Impuesto de venta local (%)</div>
+                <div class="field-hint" data-i18n="taxRateHint">Ingresa la tasa real de impuesto a las ventas de tu ciudad/estado (ej: 8.25). Varía según el lugar — no usamos un valor automático.</div>
+                <input type="number" class="custom-tip" id="taxRatePct" min="0" max="100" step="0.01" placeholder="8.25">
+            </div>
+
+            <div class="note-zone">
+                <div class="note-title" data-i18n="noteTitle">📝 Nota para tu pedido (opcional)</div>
+                <textarea class="note-input" id="orderNote" data-i18n-ph="notePh"></textarea>
+            </div>
+
+            <div class="bill-lines">
+                <div class="bill-line"><span data-i18n="subtotal">Subtotal</span><b id="subtotal">$0.00</b></div>
+                <div class="bill-line"><span id="taxLabelText" data-i18n="tax">Impuesto</span><b id="tax">$0.00</b></div>
+                <div class="bill-line delivery-fee" id="deliveryLine" style="display:none;"><span data-i18n="deliveryFeeLabel">Fee de delivery</span><b id="deliveryFeeAmt">$6.00</b></div>
+                <div class="bill-line"><span data-i18n="tip">Propina</span><b id="tipAmt">$0.00</b></div>
+            </div>
+
+            <div class="total-box">
+                <div class="total-label" data-i18n="totalLabel">Total a pagar</div>
+                <div class="total-amount" id="total">$0.00</div>
+            </div>
+
+            <button class="confirm-btn" id="confirmBtn" onclick="placeOrder()" data-i18n="confirmBtn">✅ Confirmar Pedido</button>
+            <div class="cart-error" id="cartError" data-i18n="cartEmptyError">Agrega al menos un plato para confirmar tu pedido.</div>
+            <button class="clear-btn" onclick="clearCart()" data-i18n="clearBtn">🗑️ Vaciar cuenta</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="orderModal">
+    <div class="modal-card">
+        <button class="modal-close" onclick="closeModal()" aria-label="Cerrar / Close">✕</button>
+        <div class="modal-check">✓</div>
+        <div class="modal-title" data-i18n="orderConfirmedTitle">¡Pedido confirmado!</div>
+        <div class="modal-ordernum"><span data-i18n="orderNumberLabel">N.º de pedido</span> <b id="orderNumber"></b></div>
+
+        <div class="modal-eta">
+            <span class="ico">⏱️</span>
+            <span id="etaText"></span>
+        </div>
+
+        <div class="modal-section">
+            <div class="modal-section-title" data-i18n="modalSummaryTitle">Resumen</div>
+            <div id="modalItems"></div>
+            <div class="modal-row" style="margin-top:8px; font-weight:700;"><span data-i18n="totalLabel">Total a pagar</span><span id="modalTotal"></span></div>
+        </div>
+
+        <div class="modal-section">
+            <div class="modal-section-title" data-i18n="modalContactTitle">Contacto</div>
+            <div class="modal-row"><span data-i18n="nameLabel">Nombre completo</span><span id="modalName"></span></div>
+            <div class="modal-row" id="modalAddressRow" style="display:none;"><span data-i18n="addressLabel">Dirección de entrega</span><span id="modalAddress"></span></div>
+        </div>
+
+        <div class="modal-section" id="modalNoteSection" style="display:none;">
+            <div class="modal-section-title" data-i18n="noteTitle">📝 Nota para tu pedido (opcional)</div>
+            <div id="modalNote" style="font-size:12.5px; color:#2e2018; line-height:1.4;"></div>
+        </div>
+
+        <button class="new-order-btn" onclick="newOrder()" data-i18n="newOrderBtn">🍽️ Hacer otro pedido</button>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

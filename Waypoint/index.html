@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Waypoint</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="welcome-overlay" id="welcomeOverlay">
+    <div class="welcome-card">
+        <div class="lang-switch welcome-lang-switch">
+            <button class="lang-btn active" id="welcomeLangEs" onclick="setLang('es')">ES</button>
+            <button class="lang-btn" id="welcomeLangEn" onclick="setLang('en')">EN</button>
+        </div>
+        <div class="welcome-icon">🧭</div>
+        <div class="welcome-brand" data-i18n="appTitle">Waypoint</div>
+        <h1 data-i18n="welcomeTitle">Bienvenido a bordo</h1>
+        <p data-i18n="welcomeSub">Dinos tu nombre y tracemos juntos el rumbo de tus finanzas.</p>
+        <input type="text" id="userNameInput" data-i18n-ph="welcomeNamePh" maxlength="40">
+        <div class="field-error" id="welcomeNameError" data-i18n="welcomeNameRequired">Escribe tu nombre</div>
+        <button class="welcome-btn" onclick="startJourney()" data-i18n="welcomeBtn">Comenzar →</button>
+    </div>
+</div>
+
+<div class="wrapper hidden" id="appWrapper">
+    <div class="lang-switch">
+        <button class="lang-btn active" id="langEs" onclick="setLang('es')">ES</button>
+        <button class="lang-btn" id="langEn" onclick="setLang('en')">EN</button>
+    </div>
+
+    <div class="top-header">
+        <h1 data-i18n="appTitle">🧭 Waypoint</h1>
+        <p id="userGreeting"><span id="userGreetingText"></span> <button class="edit-name-btn" onclick="editUserName()" data-i18n-title="editNameTitle" title="Cambiar nombre">✏️</button></p>
+        <p data-i18n="appSubtitle">Organiza tus ingresos y gastos para planificar tu futuro</p>
+    </div>
+
+    <div class="goal-panel">
+        <div class="goal-title" data-i18n="goalTitle">🎯 ¿Cuánto deseas ahorrar?</div>
+        <div class="goal-sub" data-i18n="goalSub">Define una meta y una fecha objetivo para ver cuánto necesitas ahorrar por pago (opcional)</div>
+        <div class="goal-row">
+            <div>
+                <span class="goal-field-label" data-i18n="goalAmountLabel">Monto de la meta</span>
+                <input type="number" id="savingsGoal" placeholder="10000" min="0" data-i18n-ph="goalPh">
+            </div>
+            <div>
+                <span class="goal-field-label" data-i18n="goalCurrencyLabel">Moneda de la meta</span>
+                <select id="goalCurrency">
+                    <option value="$">USD / Dólar ($)</option>
+                    <option value="€">EUR (€)</option>
+                    <option value="£">GBP (£)</option>
+                    <option value="MX$">MXN (MX$)</option>
+                    <option value="Bs.">VES (Bs.)</option>
+                    <option value="COP$">COP (COP$)</option>
+                    <option value="AR$">ARS (AR$)</option>
+                    <option value="CLP$">CLP (CLP$)</option>
+                    <option value="S/">PEN (S/)</option>
+                    <option value="R$">BRL (R$)</option>
+                    <option value="UY$">UYU (UY$)</option>
+                    <option value="G">PYG (G)</option>
+                    <option value="Bs">BOB (Bs)</option>
+                    <option value="B/.">PAB (B/.)</option>
+                    <option value="C">CRC (C)</option>
+                    <option value="Q">GTQ (Q)</option>
+                    <option value="L">HNL (L)</option>
+                    <option value="C$">NIO (C$)</option>
+                    <option value="RD$">DOP (RD$)</option>
+                    <option value="Fr">CHF (Fr)</option>
+                    <option value="kr">SEK/NOK/DKK (kr)</option>
+                    <option value="zl">PLN (zl)</option>
+                    <option value="lei">RON (lei)</option>
+                    <option value="RUB">RUB</option>
+                    <option value="TRY">TRY</option>
+                    <option value="¥">CNY/JPY (¥)</option>
+                    <option value="₩">KRW (₩)</option>
+                    <option value="₹">INR (₹)</option>
+                    <option value="Rp">IDR (Rp)</option>
+                    <option value="RM">MYR (RM)</option>
+                    <option value="฿">THB (฿)</option>
+                    <option value="₫">VND (₫)</option>
+                    <option value="₱">PHP (₱)</option>
+                    <option value="S$">SGD (S$)</option>
+                    <option value="AU$">AUD (AU$)</option>
+                    <option value="NZ$">NZD (NZ$)</option>
+                    <option value="R">ZAR (R)</option>
+                    <option value="E£">EGP (E£)</option>
+                    <option value="₦">NGN (₦)</option>
+                    <option value="KSh">KES (KSh)</option>
+                    <option value="MAD">MAD</option>
+                    <option value="AED">AED</option>
+                    <option value="SAR">SAR</option>
+                    <option value="₪">ILS (₪)</option>
+                    <option value="QAR">QAR</option>
+                    <option value="CA$">CAD (CA$)</option>
+                </select>
+            </div>
+        </div>
+        <div class="goal-row" style="margin-bottom:0;">
+            <div>
+                <span class="goal-field-label" data-i18n="goalDateLabel">Fecha objetivo (opcional)</span>
+                <input type="date" id="goalDate">
+            </div>
+        </div>
+    </div>
+
+    <div class="layout">
+        <div class="panel">
+            <div class="section-title" data-i18n="incomeTitle">💵 Tus Ingresos</div>
+
+            <div class="field">
+                <label data-i18n="countryLabel">País donde vives</label>
+                <select id="country" onchange="onCountryChange()"></select>
+                <div class="field-note" data-i18n="countryNote">Autocompleta una tasa de impuesto aproximada — puedes ajustarla abajo</div>
+            </div>
+
+            <div class="field" id="regionField" style="display:none;">
+                <label id="regionLabel">Estado</label>
+                <select id="region" onchange="onRegionChange()"></select>
+                <div class="field-note" id="regionNote" style="display:none;"></div>
+            </div>
+
+            <div class="field">
+                <label data-i18n="currencyLabel">Moneda</label>
+                <select id="currency">
+                    <option value="$">USD / Dólar ($)</option>
+                    <option value="€">EUR (€)</option>
+                    <option value="£">GBP (£)</option>
+                    <option value="MX$">MXN (MX$)</option>
+                    <option value="Bs.">VES (Bs.)</option>
+                    <option value="COP$">COP (COP$)</option>
+                    <option value="AR$">ARS (AR$)</option>
+                    <option value="CLP$">CLP (CLP$)</option>
+                    <option value="S/">PEN (S/)</option>
+                    <option value="R$">BRL (R$)</option>
+                    <option value="UY$">UYU (UY$)</option>
+                    <option value="G">PYG (G)</option>
+                    <option value="Bs">BOB (Bs)</option>
+                    <option value="B/.">PAB (B/.)</option>
+                    <option value="C">CRC (C)</option>
+                    <option value="Q">GTQ (Q)</option>
+                    <option value="L">HNL (L)</option>
+                    <option value="C$">NIO (C$)</option>
+                    <option value="RD$">DOP (RD$)</option>
+                    <option value="Fr">CHF (Fr)</option>
+                    <option value="kr">SEK/NOK/DKK (kr)</option>
+                    <option value="zl">PLN (zl)</option>
+                    <option value="lei">RON (lei)</option>
+                    <option value="RUB">RUB</option>
+                    <option value="TRY">TRY</option>
+                    <option value="¥">CNY/JPY (¥)</option>
+                    <option value="₩">KRW (₩)</option>
+                    <option value="₹">INR (₹)</option>
+                    <option value="Rp">IDR (Rp)</option>
+                    <option value="RM">MYR (RM)</option>
+                    <option value="฿">THB (฿)</option>
+                    <option value="₫">VND (₫)</option>
+                    <option value="₱">PHP (₱)</option>
+                    <option value="S$">SGD (S$)</option>
+                    <option value="AU$">AUD (AU$)</option>
+                    <option value="NZ$">NZD (NZ$)</option>
+                    <option value="R">ZAR (R)</option>
+                    <option value="E£">EGP (E£)</option>
+                    <option value="₦">NGN (₦)</option>
+                    <option value="KSh">KES (KSh)</option>
+                    <option value="MAD">MAD</option>
+                    <option value="AED">AED</option>
+                    <option value="SAR">SAR</option>
+                    <option value="₪">ILS (₪)</option>
+                    <option value="QAR">QAR</option>
+                    <option value="CA$">CAD (CA$)</option>
+                </select>
+            </div>
+
+            <div class="row2">
+                <div class="field">
+                    <label data-i18n="hourlyLabel">Pago por hora</label>
+                    <input type="number" id="hourlyRate" placeholder="25.00" step="0.01" min="0">
+                </div>
+                <div class="field">
+                    <label data-i18n="hoursLabel">Horas por semana</label>
+                    <input type="number" id="hoursPerWeek" placeholder="40" step="0.5" min="0">
+                </div>
+            </div>
+
+            <div class="field">
+                <label data-i18n="freqLabel">Frecuencia de pago</label>
+                <select id="payFrequency">
+                    <option value="weekly" data-i18n="weekly">Semanal</option>
+                    <option value="biweekly" data-i18n="biweekly" selected>Quincenal</option>
+                    <option value="monthly" data-i18n="monthly">Mensual</option>
+                </select>
+                <div class="field-note" data-i18n="freqNote">Solo indica cuándo te pagan, las horas por semana no cambian</div>
+            </div>
+
+            <div class="field">
+                <label data-i18n="taxLabel">Tasa de impuestos (%)</label>
+                <input type="number" id="taxRate" placeholder="0" step="0.1" min="0" max="100">
+                <div class="field-note" data-i18n="taxNote">Ingresa tu tasa real (revisa tu recibo de pago o el sitio oficial de impuestos de tu país). No usamos una tasa aproximada automática.</div>
+            </div>
+
+            <div class="field">
+                <label data-i18n="otherIncomeLabel">Ingreso adicional mensual (opcional)</label>
+                <input type="number" id="otherIncome" placeholder="0.00" step="0.01" min="0">
+            </div>
+
+            <div class="expense-block">
+                <div class="section-title" data-i18n="expensesTitle">🏠 Tus Gastos Mensuales</div>
+
+                <div class="expense-subtitle" data-i18n="fixedTitle">Gastos Fijos</div>
+                <div id="fixedExpenses">
+                    <div class="expense-row"><input type="text" data-i18n-val="rent" value="Alquiler" readonly><input type="number" class="expense-value" placeholder="0.00" min="0"></div>
+                    <div class="expense-row"><input type="text" data-i18n-val="utilities" value="Servicios" readonly><input type="number" class="expense-value" placeholder="0.00" min="0"></div>
+                    <div class="expense-row"><input type="text" data-i18n-val="insurance" value="Seguro" readonly><input type="number" class="expense-value" placeholder="0.00" min="0"></div>
+                </div>
+
+                <div class="expense-subtitle" data-i18n="variableTitle">Gastos Variables</div>
+                <div id="variableExpenses">
+                    <div class="expense-row"><input type="text" data-i18n-val="food" value="Comida" readonly><input type="number" class="expense-value" placeholder="0.00" min="0"></div>
+                    <div class="expense-row"><input type="text" data-i18n-val="transport" value="Transporte" readonly><input type="number" class="expense-value" placeholder="0.00" min="0"></div>
+                    <div class="expense-row"><input type="text" data-i18n-val="entertainment" value="Entretenimiento" readonly><input type="number" class="expense-value" placeholder="0.00" min="0"></div>
+                </div>
+
+                <button class="add-expense" onclick="addCustomExpense()" data-i18n="addExpenseBtn">+ Agregar otro gasto</button>
+            </div>
+
+            <button class="calc-btn" onclick="calculate()" data-i18n="calcBtn">Calcular Mi Plan</button>
+        </div>
+
+        <div class="panel">
+            <div class="section-title" data-i18n="resultsTitle">📊 Tu Plan Financiero</div>
+
+            <div id="results" style="display:none;">
+                <div class="income-split">
+                    <div class="income-box">
+                        <div class="il" data-i18n="annualGross">Ingreso Bruto Anual</div>
+                        <div class="iv" id="annualVal">$0</div>
+                    </div>
+                    <div class="income-box">
+                        <div class="il" data-i18n="monthlyGross">Ingreso Bruto Mensual</div>
+                        <div class="iv" id="grossVal">$0</div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box income">
+                        <div class="stat-label" data-i18n="netStat">Ingreso Neto Mensual</div>
+                        <div class="stat-value" id="netVal">$0</div>
+                    </div>
+                    <div class="stat-box expense">
+                        <div class="stat-label" data-i18n="expenseStat">Gastos Mensuales</div>
+                        <div class="stat-value" id="expenseVal">$0</div>
+                    </div>
+                    <div class="stat-box savings" id="savingsBox">
+                        <div class="stat-label" data-i18n="savingsStat">Ahorro Mensual</div>
+                        <div class="stat-value" id="savingsVal">$0</div>
+                    </div>
+                    <div class="stat-box period full" id="periodBox">
+                        <div class="stat-label" id="periodLabel">Ahorro Quincenal</div>
+                        <div class="stat-value" id="periodVal">$0</div>
+                    </div>
+                </div>
+
+                <div class="bars-section">
+                    <div class="bar-row">
+                        <div class="bar-row-label"><span class="lbl"><span class="bar-dot" style="background:#22a559;"></span><span data-i18n="incomeLegend">Ingreso</span></span><span class="amt" id="barIncomeVal">$0</span></div>
+                        <div class="bar-track"><div class="bar-fill income" id="barIncome" style="width:0%;"></div></div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-row-label"><span class="lbl"><span class="bar-dot" style="background:#e0433f;"></span><span data-i18n="expenseLegend">Gastos</span></span><span class="amt" id="barExpenseVal">$0</span></div>
+                        <div class="bar-track"><div class="bar-fill expense" id="barExpense" style="width:0%;"></div></div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-row-label"><span class="lbl"><span class="bar-dot" style="background:#e0a800;"></span><span data-i18n="savingsLegend">Ahorro</span></span><span class="amt" id="barSavingsVal">$0</span></div>
+                        <div class="bar-track"><div class="bar-fill savings" id="barSavings" style="width:0%;"></div></div>
+                    </div>
+                </div>
+
+                <div class="goal-progress" id="goalProgressBox" style="display:none;">
+                    <div class="goal-progress-label" data-i18n="goalProgressLabel">🎯 Progreso hacia tu meta</div>
+                    <div class="goal-progress-track"><div class="goal-progress-fill" id="goalProgressFill" style="width:0%;"></div></div>
+                    <div class="goal-progress-text" id="goalProgressText"></div>
+                </div>
+
+                <div id="timelineSection">
+                    <div class="timeline-title" data-i18n="timelineTitle">🗓️ Proyección de Ahorro</div>
+                    <div id="timelineRows"></div>
+                </div>
+            </div>
+
+            <div id="placeholder" class="placeholder" data-i18n="placeholder">
+                👈 Completa tus ingresos y gastos para ver tu plan financiero personalizado
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
