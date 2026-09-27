@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tenor</title>
+<meta name="description" content="Loan simulator: monthly payment, total interest, amortization schedule and how much extra payments save you.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏦</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="welcome" id="welcome">
+    <div class="welcome-card">
+        <div class="lang-switch">
+            <button class="lang-btn" data-lang="es" onclick="setLang('es')">ES</button>
+            <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+        </div>
+        <div class="brand-mark">Tenor</div>
+        <h1 data-t="welcomeTitle">¿Qué quieres financiar?</h1>
+        <p data-t="welcomeSub">Elige y te mostramos la cuota, los intereses y cómo pagar menos.</p>
+        <div class="goals" id="goals"></div>
+    </div>
+</div>
+
+<div class="page hidden" id="app">
+    <header class="top">
+        <div>
+            <div class="brand">Tenor</div>
+            <div class="tagline" data-t="tagline">Simulador de préstamos</div>
+        </div>
+        <div class="top-right">
+            <button class="goal-chip" id="goalChip" onclick="showWelcome()"></button>
+            <div class="lang-switch inline">
+                <button class="lang-btn" data-lang="es" onclick="setLang('es')">ES</button>
+                <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="layout">
+        <section class="card inputs">
+            <h2 data-t="loanTitle">Tu préstamo</h2>
+
+            <div class="field">
+                <label for="amount" data-t="amountLabel">Monto del préstamo</label>
+                <div class="money-field">
+                    <select id="currency" aria-label="Moneda"></select>
+                    <input id="amount" class="num-input" inputmode="decimal" autocomplete="off" data-decimals="2" placeholder="0">
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="rate" data-t="rateLabel">Tasa de interés anual (%)</label>
+                <input id="rate" class="num-input" inputmode="decimal" autocomplete="off" data-decimals="3" data-max="100" placeholder="0">
+                <p class="note" data-t="rateNote">Usa la tasa que te ofrece tu banco (TAE / APR). No ponemos una tasa aproximada.</p>
+            </div>
+
+            <div class="field">
+                <label for="term" data-t="termLabel">Plazo</label>
+                <div class="term-row">
+                    <input id="term" class="num-input" inputmode="numeric" autocomplete="off" data-decimals="0" data-max="600" placeholder="0">
+                    <div class="segmented" role="group">
+                        <button id="unitYears" onclick="setUnit('years')" data-t="yearsUnit">Años</button>
+                        <button id="unitMonths" onclick="setUnit('months')" data-t="monthsUnit">Meses</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="field">
+                <label for="start" data-t="startLabel">Primer pago</label>
+                <input id="start" type="month">
+            </div>
+
+            <div class="extra-box">
+                <label for="extra" data-t="extraLabel">Pago extra cada mes (opcional)</label>
+                <div class="money-field">
+                    <span class="ccy-tag" id="extraCcy">$</span>
+                    <input id="extra" class="num-input" inputmode="decimal" autocomplete="off" data-decimals="2" placeholder="0">
+                </div>
+                <p class="note" data-t="extraNote">Lo que pagas de más va directo al capital: terminas antes y pagas menos intereses.</p>
+            </div>
+        </section>
+
+        <section class="results">
+            <div class="empty card" id="empty">
+                <div class="empty-icon">🏦</div>
+                <p data-t="empty">Escribe el monto, la tasa y el plazo para ver tu plan de pagos.</p>
+            </div>
+
+            <div id="output" class="hidden">
+                <div class="card hero">
+                    <div class="hero-label" data-t="paymentLabel">Cuota mensual</div>
+                    <div class="hero-value" id="payment"></div>
+                    <div class="hero-sub" id="paymentSub"></div>
+                </div>
+
+                <div class="tiles">
+                    <div class="tile"><div class="tile-label" data-t="interestLabel">Intereses totales</div><div class="tile-value" id="totalInterest"></div></div>
+                    <div class="tile"><div class="tile-label" data-t="totalLabel">Total a pagar</div><div class="tile-value" id="totalPaid"></div></div>
+                    <div class="tile"><div class="tile-label" data-t="payoffLabel">Último pago</div><div class="tile-value" id="payoff"></div></div>
+                </div>
+
+                <div class="savings hidden" id="savings"></div>
+
+                <div class="card chart-card">
+                    <div class="chart-head">
+                        <h3 data-t="balanceTitle">Saldo pendiente</h3>
+                        <div class="legend" id="balanceLegend"></div>
+                    </div>
+                    <div class="chart" id="balanceChart"></div>
+                </div>
+
+                <div class="card chart-card">
+                    <div class="chart-head">
+                        <h3 data-t="splitTitle">A dónde va tu dinero cada año</h3>
+                        <div class="legend">
+                            <span><i class="key principal"></i><span data-t="principal">Capital</span></span>
+                            <span><i class="key interest"></i><span data-t="interest">Intereses</span></span>
+                        </div>
+                    </div>
+                    <div class="chart" id="splitChart"></div>
+                </div>
+
+                <div class="card table-card">
+                    <div class="chart-head">
+                        <h3 data-t="scheduleTitle">Tabla de amortización</h3>
+                        <div class="table-actions">
+                            <div class="segmented small" role="group">
+                                <button id="viewYearly" onclick="setView('yearly')" data-t="byYear">Por año</button>
+                                <button id="viewMonthly" onclick="setView('monthly')" data-t="byMonth">Por mes</button>
+                            </div>
+                            <button class="csv-btn" onclick="downloadCsv()" data-t="csv">Descargar CSV</button>
+                        </div>
+                    </div>
+                    <div class="table-wrap"><table id="schedule"></table></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="foot" data-t="disclaimer">Cálculo con el sistema francés (cuota fija). Es una simulación: tu banco puede sumar seguros, comisiones o impuestos.</footer>
+</div>
+
+<div class="tooltip" id="tooltip" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
