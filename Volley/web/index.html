@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Volley</title>
+<meta name="description" content="Neon arcade Pong — play against the CPU or a friend. Browser version of the Python game.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏓</text></svg>">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: #080614; overflow: hidden; }
+    body { display: flex; align-items: center; justify-content: center; touch-action: none; -webkit-user-select: none; user-select: none; }
+    canvas { display: block; max-width: 100vw; max-height: 100vh; aspect-ratio: 960 / 600; width: 100%; height: auto; image-rendering: auto; }
+    @media (min-aspect-ratio: 960/600) { canvas { width: auto; height: 100%; } }
+    .back { position: fixed; left: 12px; top: 10px; font: 12px Menlo, Consolas, monospace; color: #786ea0; text-decoration: none; opacity: .75; }
+    .back:hover { color: #ff2e97; opacity: 1; }
+    .rotate { display: none; position: fixed; left: 0; right: 0; bottom: 18%; text-align: center; font: bold 15px Menlo, Consolas, monospace; color: #00e5ff; letter-spacing: .5px; pointer-events: none; }
+    .rotate span { display: inline-block; font-size: 30px; margin-bottom: 8px; animation: tilt 1.8s ease-in-out infinite; }
+    @keyframes tilt { 50% { transform: rotate(90deg); } }
+    @media (orientation: portrait) and (pointer: coarse) { .rotate { display: block; } }
+</style>
+</head>
+<body>
+<a class="back" href="../../">← portfolio</a>
+<canvas id="game" width="960" height="600"></canvas>
+<div class="rotate" id="rotate"><span>📱</span><br><b id="rotateText">Gira tu teléfono para jugar mejor</b></div>
+<script>
+// Browser port of Volley/main.py — same rules, colors and CPU tuning.
+const W = 960, H = 600, WIN_SCORE = 7;
+const FIRST_SERVE_DELAY = 2.6, SERVE_DELAY = 1.0;
+const PADDLE_W = 14, PADDLE_H = 96, PADDLE_SPEED = 520;
+const BALL = 14, BALL_START = 430, BALL_MAX = 1050, SPEEDUP = 1.06, MAX_ANGLE = 55 * Math.PI / 180;
+
+const BG = '#080614', GRID = '#1a1434', MAGENTA = '#ff2e97', CYAN = '#00e5ff', YELLOW = '#ffd60a', WHITE = '#f0f0ff', DIM = '#786ea0';
+const FONT = 'Menlo, Consolas, "Courier New", monospace';
+
+const TEXT = {
+    es: {
+        subtitle: 'ARCADE DE NEÓN', vs_cpu: '1 JUGADOR  vs  CPU', two_players: '2 JUGADORES', difficulty: 'DIFICULTAD',
+        easy: 'FÁCIL', normal: 'NORMAL', hard: 'DIFÍCIL',
+        menu_hint: '↑ ↓ elegir   ← → dificultad   ENTER jugar   L idioma',
+        touch_hint: 'Toca una opción para jugar',
+        controls_1p: 'Tú: W / S  ·  en pantalla táctil, arrastra el dedo',
+        controls_2p: 'Izquierda: W / S     Derecha: ↑ / ↓',
+        first_to: 'Gana el primero en llegar a {n}',
+        paused: 'PAUSA', pause_hint: 'P continuar   ESC menú',
+        wins: '¡{who} GANA!', you: 'TÚ', cpu: 'CPU', left: 'IZQUIERDA', right: 'DERECHA',
+        rally: 'RALLY {n}', best_rally: 'Mejor rally: {n}', longest_rally: 'Rally más largo del partido: {n}',
+        end_hint: 'ENTER o toca para revancha   ESC menú'
+    },
+    en: {
+        subtitle: 'NEON ARCADE', vs_cpu: '1 PLAYER  vs  CPU', two_players: '2 PLAYERS', difficulty: 'DIFFICULTY',
+        easy: 'EASY', normal: 'NORMAL', hard: 'HARD',
+        menu_hint: '↑ ↓ choose   ← → difficulty   ENTER play   L language',
+        touch_hint: 'Tap an option to play',
+        controls_1p: 'You: W / S  ·  on touch screens, drag your finger',
+        controls_2p: 'Left: W / S     Right: ↑ / ↓',
+        first_to: 'First to {n} wins',
+        paused: 'PAUSED', pause_hint: 'P resume   ESC menu',
+        wins: '{who} WINS!', you: 'YOU', cpu: 'CPU', left: 'LEFT', right: 'RIGHT',
+        rally: 'RALLY {n}', best_rally: 'Best rally: {n}', longest_rally: 'Longest rally this match: {n}',
+        end_hint: 'ENTER or tap for a rematch   ESC menu'
+    }
+};
+
+const CPU_LEVELS = {
+    easy:   { speed: 300, reaction: 0.20, error: 60 },
+    normal: { speed: 420, reaction: 0.10, error: 36 },
+    hard:   { speed: 560, reaction: 0.05, error: 22 }
+};
+const DIFFICULTIES = ['easy', 'normal', 'hard'];
+const SAVE_KEY = 'volleySave';
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// Sharp rendering on retina screens
+function fitCanvas(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+fitCanvas();
+
+function loadSave(){
+    try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); return d && typeof d === 'object' ? d : {}; }
+    catch(err){ return {}; }
+}
+function writeSave(){
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify({ lang, difficulty, bestRally })); } catch(err){ /* ignore */ }
+}
+
+const save = loadSave();
+let lang = save.lang === 'en' ? 'en' : 'es';
+let difficulty = CPU_LEVELS[save.difficulty] ? save.difficulty : 'normal';
+let bestRally = Number.isInteger(save.bestRally) && save.bestRally >= 0 ? save.bestRally : 0;
+let menuIndex = 0;
+let state = 'menu';
+let clock = 0;
+let usedTouch = window.matchMedia('(pointer: coarse)').matches;
+document.documentElement.lang = lang;
+
+function t(key, vars){
+    let s = TEXT[lang][key];
+    if(vars) Object.keys(vars).forEach(function(k){ s = s.replace('{' + k + '}', vars[k]); });
+    return s;
+}
+
+// ---------- sound: square-wave beeps with a fade, like the Python version ----------
+let audio = null;
+function beep(freq, ms, volume){
+    if(!audio){
+        try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch(err){ return; }
+    }
+    if(audio.state === 'suspended') audio.resume();
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime((volume || 0.35) * 0.25, audio.currentTime);
+    gain.gain.linearRampToValueAtTime(0, audio.currentTime + ms / 1000);
+    osc.connect(gain).connect(audio.destination);
+    osc.start();
+    osc.stop(audio.currentTime + ms / 1000);
+}
+const sounds = {
+    paddle: function(){ beep(660, 60); },
+    wall: function(){ beep(440, 45, 0.25); },
+    score: function(){ beep(220, 260); },
+    win: function(){ beep(880, 420); }
+};
+
+// ---------- game objects ----------
+function makePaddle(x, color){ return { x: x, y: H / 2 - PADDLE_H / 2, color: color, flash: 0 }; }
+function movePaddle(p, dir, dt, speed){
+    p.y = Math.max(0, Math.min(H - PADDLE_H, p.y + dir * (speed || PADDLE_SPEED) * dt));
+}
+function resetBall(dir){
+    const angle = (Math.random() * 0.9) - 0.45;
+    ball.x = W / 2; ball.y = H / 2; ball.speed = BALL_START;
+    ball.vx = dir * ball.speed * Math.cos(angle);
+    ball.vy = ball.speed * Math.sin(angle);
+    ball.trail = [];
+}
+
+let left, right, ball = {}, scores, particles, rally, matchBestRally, serveTimer, cpuTarget, cpuThink, cpuError, shake, winner, twoPlayers = false;
+
+function newMatch(two){
+    twoPlayers = two;
+    left = makePaddle(36, MAGENTA);
+    right = makePaddle(W - 36 - PADDLE_W, CYAN);
+    resetBall(Math.random() < 0.5 ? -1 : 1);
+    scores = [0, 0];
+    particles = [];
+    rally = 0; matchBestRally = 0;
+    serveTimer = FIRST_SERVE_DELAY;
+    cpuTarget = H / 2; cpuThink = 0; cpuError = null;
+    shake = 0; winner = null;
+}
+
+function burst(x, y, color, n){
+    for(let i = 0; i < n; i++){
+        const a = Math.random() * Math.PI * 2, s = 80 + Math.random() * 240;
+        const life = 0.25 + Math.random() * 0.35;
+        particles.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: life, max: life, color: color });
+    }
+}
+
+function point(scorer){
+    scores[scorer]++;
+    sounds.score();
+    shake = 0.35;
+    burst(scorer === 0 ? W - 10 : 10, ball.y, YELLOW, 40);
+    rally = 0;
+    if(scores[scorer] >= WIN_SCORE){
+        winner = scorer;
+        state = 'over';
+        sounds.win();
+        writeSave();
+    } else {
+        resetBall(scorer === 0 ? -1 : 1);
+        left.y = right.y = H / 2 - PADDLE_H / 2;
+        serveTimer = SERVE_DELAY;
+    }
+}
+
+function hitPaddle(p, dir){
+    const offset = Math.max(-1, Math.min(1, (ball.y - (p.y + PADDLE_H / 2)) / (PADDLE_H / 2)));
+    const angle = offset * MAX_ANGLE;
+    ball.speed = Math.min(ball.speed * SPEEDUP, BALL_MAX);
+    ball.vx = dir * ball.speed * Math.cos(angle);
+    ball.vy = ball.speed * Math.sin(angle);
+    p.flash = 0.15;
+    rally++;
+    matchBestRally = Math.max(matchBestRally, rally);
+    if(rally > bestRally) bestRally = rally;
+    sounds.paddle();
+    burst(ball.x, ball.y, p.color, 12);
+}
+
+// The CPU commits to one misjudgement per approach, bigger when the ball is fast
+function gauss(){ return Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random()); }
+function updateCpu(dt){
+    const level = CPU_LEVELS[difficulty];
+    cpuThink -= dt;
+    if(cpuThink <= 0){
+        cpuThink = level.reaction;
+        if(ball.vx > 0){
+            if(cpuError === null) cpuError = gauss() * level.error * (ball.speed / BALL_START);
+            const timeToReach = (right.x - ball.x) / ball.vx;
+            const span = H - BALL;
+            let y = ((ball.y + ball.vy * timeToReach - BALL / 2) % (2 * span) + 2 * span) % (2 * span);
+            if(y > span) y = 2 * span - y;
+            cpuTarget = y + BALL / 2 + cpuError;
+        } else {
+            cpuError = null;
+            cpuTarget = H / 2;
+        }
+    }
+    const diff = cpuTarget - (right.y + PADDLE_H / 2);
+    if(Math.abs(diff) > 8) movePaddle(right, diff > 0 ? 1 : -1, dt, level.speed);
+}
+
+const keys = {};
+let touchY = null;
+
+function overlaps(p){
+    return ball.x + BALL / 2 > p.x && ball.x - BALL / 2 < p.x + PADDLE_W &&
+           ball.y + BALL / 2 > p.y && ball.y - BALL / 2 < p.y + PADDLE_H;
+}
+
+function updatePlay(dt){
+    if(touchY !== null){
+        const d = touchY - (left.y + PADDLE_H / 2);
+        if(Math.abs(d) > 4) movePaddle(left, d > 0 ? 1 : -1, Math.min(dt, Math.abs(d) / PADDLE_SPEED));
+    } else {
+        movePaddle(left, (keys.s ? 1 : 0) - (keys.w ? 1 : 0), dt);
+    }
+    if(twoPlayers) movePaddle(right, (keys.ArrowDown ? 1 : 0) - (keys.ArrowUp ? 1 : 0), dt);
+    else updateCpu(dt);
+
+    left.flash = Math.max(0, left.flash - dt);
+    right.flash = Math.max(0, right.flash - dt);
+
+    if(serveTimer > 0){ serveTimer -= dt; return; }
+
+    // sub-steps keep a fast ball from tunnelling through a paddle
+    const steps = Math.max(1, Math.floor(ball.speed * dt / (BALL / 2)) + 1);
+    for(let i = 0; i < steps; i++){
+        ball.x += ball.vx * dt / steps;
+        ball.y += ball.vy * dt / steps;
+        if(ball.y - BALL / 2 <= 0 && ball.vy < 0){ ball.y = BALL / 2; ball.vy = -ball.vy; sounds.wall(); }
+        else if(ball.y + BALL / 2 >= H && ball.vy > 0){ ball.y = H - BALL / 2; ball.vy = -ball.vy; sounds.wall(); }
+        // only the front face counts, so a ball already past a paddle can't bounce back
+        if(ball.vx < 0 && overlaps(left) && ball.x - ball.vx * dt / steps >= left.x + PADDLE_W - 1){
+            ball.x = left.x + PADDLE_W + BALL / 2; hitPaddle(left, 1);
+        } else if(ball.vx > 0 && overlaps(right) && ball.x - ball.vx * dt / steps <= right.x + 1){
+            ball.x = right.x - BALL / 2; hitPaddle(right, -1);
+        }
+    }
+    ball.trail.push([ball.x, ball.y]);
+    if(ball.trail.length > 14) ball.trail.shift();
+
+    if(ball.x < -BALL) point(1);
+    else if(ball.x > W + BALL) point(0);
+}
+
+// ---------- drawing ----------
+function text(str, size, color, x, y, glow, bold){
+    ctx.font = (bold === false ? '' : 'bold ') + size + 'px ' + FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if(glow){ ctx.shadowColor = color; ctx.shadowBlur = 18; }
+    ctx.fillStyle = color;
+    ctx.fillText(str, x, y);
+    ctx.shadowBlur = 0;
+}
+
+function drawBackground(){
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = GRID;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for(let x = 0; x < W; x += 48){ ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H); }
+    for(let y = 0; y < H; y += 48){ ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); }
+    ctx.stroke();
+}
+
+const scanlines = (function(){
+    const c = document.createElement('canvas');
+    c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    g.fillStyle = 'rgba(0,0,0,0.2)';
+    for(let y = 0; y < H; y += 3) g.fillRect(0, y, W, 1);
+    const v = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, W * 0.7);
+    v.addColorStop(0, 'rgba(0,0,0,0)');
+    v.addColorStop(1, 'rgba(0,0,0,0.55)');
+    g.fillStyle = v;
+    g.fillRect(0, 0, W, H);
+    return c;
+})();
+
+function drawCourt(ox, oy){
+    ctx.fillStyle = DIM;
+    for(let y = 10; y < H; y += 30) ctx.fillRect(W / 2 - 2 + ox, y + oy, 4, 16);
+    text(String(scores[0]), 96, MAGENTA, W / 2 - 110 + ox, 80 + oy, true);
+    text(String(scores[1]), 96, CYAN, W / 2 + 110 + ox, 80 + oy, true);
+
+    [left, right].forEach(function(p){
+        ctx.shadowColor = p.color; ctx.shadowBlur = 28;
+        ctx.fillStyle = p.flash > 0 ? WHITE : p.color;
+        roundRect(p.x + ox, p.y + oy, PADDLE_W, PADDLE_H, 5);
+        ctx.shadowBlur = 0;
+    });
+
+    ball.trail.forEach(function(pt, i){
+        const k = (i + 1) / ball.trail.length;
+        const size = Math.max(2, BALL * k * 0.8);
+        ctx.fillStyle = 'rgba(255,214,10,' + (0.6 * k) + ')';
+        ctx.fillRect(pt[0] - size / 2 + ox, pt[1] - size / 2 + oy, size, size);
+    });
+    ctx.shadowColor = YELLOW; ctx.shadowBlur = 24;
+    ctx.fillStyle = WHITE;
+    roundRect(ball.x - BALL / 2 + ox, ball.y - BALL / 2 + oy, BALL, BALL, 3);
+    ctx.shadowBlur = 0;
+
+    particles.forEach(function(p){
+        ctx.globalAlpha = Math.max(0, p.life / p.max);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x + ox, p.y + oy, 4, 4);
+    });
+    ctx.globalAlpha = 1;
+
+    if(rally >= 3) text(t('rally', { n: rally }), 16, YELLOW, W / 2, H - 24, false, false);
+    if(state === 'play' && serveTimer > 0){
+        const count = Math.ceil(serveTimer / 0.34);
+        if(count <= 3) text(String(count), 44, WHITE, W / 2, H / 2 - 60, true);
+    }
+}
+
+function roundRect(x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    ctx.fill();
+}
+
+const MENU_Y = [290, 352];
+function drawMenu(){
+    drawBackground();
+    text('VOLLEY', 96, MAGENTA, W / 2, 130 + Math.sin(clock * 2) * 6, true);
+    text(t('subtitle'), 24, CYAN, W / 2, 200);
+    [t('vs_cpu'), t('two_players')].forEach(function(label, i){
+        const selected = i === menuIndex;
+        if(selected){
+            ctx.strokeStyle = YELLOW; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.roundRect ? ctx.roundRect(W / 2 - 220, MENU_Y[i] - 24, 440, 48, 8) : ctx.rect(W / 2 - 220, MENU_Y[i] - 24, 440, 48);
+            ctx.stroke();
+        }
+        text(label, 24, selected ? YELLOW : DIM, W / 2, MENU_Y[i]);
+    });
+    text(t('difficulty') + ':  ◀ ' + t(difficulty) + ' ▶', 16, menuIndex === 0 ? CYAN : DIM, W / 2, 430, false, false);
+    text(t('best_rally', { n: bestRally }), 16, DIM, W / 2, 470, false, false);
+    text(usedTouch ? t('touch_hint') : t('menu_hint'), 16, DIM, W / 2, H - 30, false, false);
+    text('ES', 16, lang === 'es' ? YELLOW : DIM, W - 78, 24, false, false);
+    text('|', 16, DIM, W - 60, 24, false, false);
+    text('EN', 16, lang === 'en' ? YELLOW : DIM, W - 42, 24, false, false);
+}
+
+function drawOverlay(title, lines, color){
+    ctx.fillStyle = 'rgba(8,6,20,0.75)';
+    ctx.fillRect(0, 0, W, H);
+    text(title, 44, color, W / 2, H / 2 - 50, true);
+    lines.forEach(function(line, i){ text(line, 16, i === 0 ? WHITE : DIM, W / 2, H / 2 + 10 + i * 30, false, false); });
+}
+
+function draw(){
+    ctx.clearRect(0, 0, W, H);
+    if(state === 'menu'){
+        drawMenu();
+    } else {
+        let ox = 0, oy = 0;
+        if(shake > 0){ const a = 10 * shake; ox = (Math.random() * 2 - 1) * a; oy = (Math.random() * 2 - 1) * a; }
+        drawBackground();
+        drawCourt(ox, oy);
+        if(state === 'play' && serveTimer > SERVE_DELAY && scores[0] + scores[1] === 0){
+            ctx.fillStyle = 'rgba(8,6,20,0.7)';
+            ctx.fillRect(W / 2 - 300, H / 2 + 22, 600, 64);
+            text(twoPlayers ? t('controls_2p') : t('controls_1p'), 16, WHITE, W / 2, H / 2 + 40, false, false);
+            text(t('first_to', { n: WIN_SCORE }), 16, DIM, W / 2, H / 2 + 66, false, false);
+        }
+        if(state === 'pause'){
+            drawOverlay(t('paused'), [t('pause_hint')], YELLOW);
+        } else if(state === 'over'){
+            const who = twoPlayers ? (winner === 0 ? t('left') : t('right')) : (winner === 0 ? t('you') : t('cpu'));
+            drawOverlay(t('wins', { who: who }), [t('longest_rally', { n: matchBestRally }), t('end_hint')], winner === 0 ? MAGENTA : CYAN);
+        }
+    }
+    ctx.drawImage(scanlines, 0, 0);
+}
+
+// ---------- input ----------
+function toggleLang(){
+    lang = lang === 'es' ? 'en' : 'es';
+    applyLang();
+    writeSave();
+}
+function applyLang(){
+    document.documentElement.lang = lang;
+    document.getElementById('rotateText').textContent = lang === 'es' ? 'Gira tu teléfono para jugar mejor' : 'Turn your phone sideways to play';
+}
+applyLang();
+function startMatch(two){ newMatch(two); state = 'play'; }
+
+document.addEventListener('keydown', function(e){
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    keys[k] = true;
+    if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].indexOf(e.key) !== -1) e.preventDefault();
+    if(e.repeat) return;
+    if(k === 'l'){ toggleLang(); return; }
+    if(state === 'menu'){
+        if(k === 'ArrowUp' || k === 'w' || k === 'ArrowDown' || k === 's') menuIndex = 1 - menuIndex;
+        else if(k === 'ArrowLeft' || k === 'a' || k === 'ArrowRight' || k === 'd'){
+            const step = (k === 'ArrowLeft' || k === 'a') ? -1 : 1;
+            difficulty = DIFFICULTIES[(DIFFICULTIES.indexOf(difficulty) + step + 3) % 3];
+            writeSave();
+        } else if(k === 'Enter' || k === ' ') startMatch(menuIndex === 1);
+    } else if(state === 'play'){
+        if(k === 'p' || k === 'Escape') state = 'pause';
+    } else if(state === 'pause'){
+        if(k === 'p') state = 'play';
+        else if(k === 'Escape'){ writeSave(); state = 'menu'; }
+    } else if(state === 'over'){
+        if(k === 'Enter' || k === ' ') startMatch(twoPlayers);
+        else if(k === 'Escape') state = 'menu';
+    }
+});
+document.addEventListener('keyup', function(e){ keys[e.key.length === 1 ? e.key.toLowerCase() : e.key] = false; });
+window.addEventListener('blur', function(){ if(state === 'play') state = 'pause'; });
+
+function canvasPoint(e){
+    const r = canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+
+canvas.addEventListener('pointerdown', function(e){
+    if(e.pointerType !== 'mouse') usedTouch = true;
+    const p = canvasPoint(e);
+    if(p.y < 50 && p.x > W - 110){ toggleLang(); return; }
+    if(state === 'menu'){
+        if(Math.abs(p.y - 430) < 18){
+            difficulty = DIFFICULTIES[(DIFFICULTIES.indexOf(difficulty) + (p.x < W / 2 ? -1 : 1) + 3) % 3];
+            writeSave();
+            return;
+        }
+        for(let i = 0; i < 2; i++){
+            if(Math.abs(p.y - MENU_Y[i]) < 26 && Math.abs(p.x - W / 2) < 220){ menuIndex = i; startMatch(i === 1); return; }
+        }
+    } else if(state === 'over'){
+        startMatch(twoPlayers);
+    } else if(state === 'pause'){
+        state = 'play';
+    } else if(e.pointerType !== 'mouse'){
+        touchY = p.y;
+    }
+});
+canvas.addEventListener('pointermove', function(e){
+    if(touchY !== null) touchY = canvasPoint(e).y;
+});
+['pointerup', 'pointercancel'].forEach(function(ev){ canvas.addEventListener(ev, function(){ touchY = null; }); });
+
+newMatch(false);
+let last = performance.now();
+function frame(now){
+    const dt = Math.min((now - last) / 1000, 1 / 30);
+    last = now;
+    clock += dt;
+    if(state === 'play') updatePlay(dt);
+    shake = Math.max(0, shake - dt);
+    particles.forEach(function(p){ p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; p.life -= dt; });
+    particles = particles.filter(function(p){ return p.life > 0; });
+    draw();
+    requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

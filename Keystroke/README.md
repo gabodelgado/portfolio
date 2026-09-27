@@ -2,6 +2,8 @@
 
 A typing speed test with a typewriter soul: cream paper, ribbon-red mistakes and a stamp when you set a record.
 
+**[▶ Play it in your browser](https://gabodelgado.github.io/portfolio/Keystroke/web/)**
+
 ![Keystroke](screenshot.png)
 
 ## Highlights
@@ -30,3 +32,7 @@ From the repository's root folder:
 pip install -r requirements.txt
 python Keystroke/main.py
 ```
+
+## Browser version
+
+[`web/`](web/) holds a JavaScript port so the game can be played without installing anything. It follows the Python version's rules, colors and tuning, and is drawn with HTML, so accents and phone keyboards work. Records are kept in the browser.

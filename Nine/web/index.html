@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nine</title>
+<meta name="description" content="Play sudoku, or type in any puzzle and watch it get solved. Browser version of the Python app.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔢</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;700&family=Nunito+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #e9efe9; --paper: #fbfdfb; --thin: #c5d1c8; --thick: #2e3d38; --given: #1f2a27; --user: #2f7d6d;
+        --solver: #4a78b0; --coral: #d65e50; --coral-bg: #fbe3df; --selected: #c9e4d9; --peer: #eef5f0; --same: #d9ece4; --muted: #6e8079;
+        --ui: 'Avenir Next', 'Nunito Sans', 'Helvetica Neue', Arial, sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { background: var(--bg); }
+    body { font-family: var(--ui); color: var(--thick); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 28px 16px; }
+    .back { position: fixed; left: 14px; top: 10px; font-size: 12px; color: var(--muted); text-decoration: none; }
+    .back:hover { color: var(--user); }
+    .app { display: grid; grid-template-columns: minmax(0, 594px) 300px; gap: 44px; align-items: start; width: 100%; max-width: 940px; }
+
+    .board {
+        display: grid; grid-template-columns: repeat(9, 1fr); aspect-ratio: 1; background: var(--paper);
+        border: 3px solid var(--thick); border-radius: 10px; overflow: hidden; box-shadow: 0 6px 0 #d6e0d9; user-select: none; -webkit-user-select: none;
+    }
+    .cell {
+        display: flex; align-items: center; justify-content: center; font-size: clamp(18px, 5.4vw, 36px); font-weight: 400; color: var(--user);
+        border-right: 1px solid var(--thin); border-bottom: 1px solid var(--thin); cursor: pointer; font-variant-numeric: tabular-nums;
+    }
+    .cell:nth-child(9n) { border-right: none; }
+    .cell:nth-child(9n+3), .cell:nth-child(9n+6) { border-right: 3px solid var(--thick); }
+    .cell:nth-child(n+19):nth-child(-n+27), .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 3px solid var(--thick); }
+    .cell:nth-child(n+73) { border-bottom: none; }
+    .cell.peer { background: var(--peer); }
+    .cell.same { background: var(--same); }
+    .cell.bad { background: var(--coral-bg); color: var(--coral) !important; }
+    .cell.sel { background: var(--selected); }
+    .cell.given { color: var(--given); font-weight: 700; }
+    .cell.solver, .cell.hinted { color: var(--solver); }
+
+    .side { padding-top: 4px; }
+    .top-row { display: flex; justify-content: space-between; align-items: baseline; }
+    h1 { font-family: Futura, 'Jost', var(--ui); font-size: 46px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+    .lang button { background: none; border: none; font: 700 16px var(--ui); color: var(--thin); cursor: pointer; margin-left: 8px; }
+    .lang button.active { color: var(--user); }
+    .tagline { color: var(--muted); font-size: 15px; margin-top: 8px; }
+    .section-label { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; margin: 26px 0 8px; }
+    .row { display: grid; gap: 8px; }
+    .row.three { grid-template-columns: repeat(3, 1fr); }
+    .row.two { grid-template-columns: 1fr 1fr; }
+    .btn {
+        height: 44px; border-radius: 10px; border: 2px solid var(--thin); background: var(--paper); color: var(--thick);
+        font: 700 16px var(--ui); cursor: pointer; transition: background .15s;
+    }
+    .btn:hover { background: var(--peer); }
+    .btn.active { background: var(--thick); border-color: var(--thick); color: #fff; }
+    .btn.ghost { border-color: var(--thick); background: transparent; margin-top: 8px; width: 100%; }
+    .btn.ghost.active { background: var(--thick); color: #fff; }
+    .btn.primary { background: var(--user); border-color: var(--user); color: #fff; }
+    .btn.primary:hover { background: #26695b; }
+    .actions { margin-top: 30px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 30px; min-height: 44px; }
+    .stat-label { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+    .stat-value { font-size: 18px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .message { margin-top: 18px; font-size: 15px; font-weight: 700; line-height: 1.45; min-height: 44px; color: var(--muted); }
+    .keys { margin-top: 18px; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+
+    .pad { display: none; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 14px; }
+    .pad button { height: 48px; border-radius: 10px; border: 2px solid var(--thin); background: var(--paper); font: 700 20px var(--ui); color: var(--thick); }
+    .pad button:active { background: var(--selected); }
+
+    button:focus-visible { outline: 2px solid var(--user); outline-offset: 2px; }
+
+    @media (max-width: 900px) {
+        body { align-items: flex-start; padding: 36px 12px 20px; }
+        .app { grid-template-columns: 1fr; gap: 16px; max-width: 520px; }
+        .side { order: -1; }
+        h1 { font-size: 36px; }
+        .section-label { margin-top: 14px; }
+        .actions { margin-top: 10px; }
+        .stats { margin-top: 12px; min-height: 0; }
+        .message { min-height: 0; margin-top: 10px; }
+        .keys { display: none; }
+        .pad { display: grid; }
+        .app > .board-wrap { order: 0; }
+    }
+</style>
+</head>
+<body>
+<a class="back" href="../../">← portfolio</a>
+<div class="app">
+    <div class="board-wrap">
+        <div class="board" id="board"></div>
+        <div class="pad" id="pad"></div>
+    </div>
+    <div class="side">
+        <div class="top-row">
+            <h1>Nine</h1>
+            <div class="lang"><button id="langEs" onclick="setLang('es')">ES</button><button id="langEn" onclick="setLang('en')">EN</button></div>
+        </div>
+        <div class="tagline" data-t="tagline"></div>
+        <div class="section-label" data-t="new_puzzle"></div>
+        <div class="row three">
+            <button class="btn level" data-level="easy" onclick="newPuzzle('easy')" data-t="easy"></button>
+            <button class="btn level" data-level="medium" onclick="newPuzzle('medium')" data-t="medium"></button>
+            <button class="btn level" data-level="hard" onclick="newPuzzle('hard')" data-t="hard"></button>
+        </div>
+        <button class="btn ghost" id="ownBtn" onclick="customBoard()" data-t="own"></button>
+        <div class="actions row two">
+            <button class="btn" onclick="hint()" data-t="hint"></button>
+            <button class="btn" onclick="check()" data-t="check"></button>
+            <button class="btn" onclick="reset()" data-t="reset"></button>
+            <button class="btn primary" onclick="startSolver()" data-t="solve"></button>
+        </div>
+        <div class="stats" id="stats"></div>
+        <div class="message" id="message"></div>
+        <div class="keys" id="keys"></div>
+    </div>
+</div>
+
+<script src="sudoku.js"></script>
+<script>
+// Browser port of Nine/main.py
+const SAVE_KEY = 'nineSave';
+const DIFFICULTIES = ['easy', 'medium', 'hard'];
+const COLORS = { muted: 'var(--muted)', user: 'var(--user)', solver: 'var(--solver)', coral: 'var(--coral)' };
+
+const TEXT = {
+    es: {
+        tagline: 'Juega o resuelve cualquier sudoku', new_puzzle: 'Nuevo sudoku',
+        easy: 'Fácil', medium: 'Medio', hard: 'Difícil', own: 'Escribir el mío',
+        hint: 'Pista', check: 'Verificar', solve: 'Resolver', reset: 'Reiniciar',
+        time: 'Tiempo', mistakes: 'Errores', best: 'Mejor',
+        mode_play: 'Modo juego · {level}', mode_custom: 'Modo resolver · escribe tu sudoku y toca Resolver',
+        won: '¡Resuelto en {time}!', won_record: '¡Resuelto en {time}! Nuevo récord en {level}.',
+        check_ok: 'Todo va bien hasta ahora.', check_bad: 'Hay {n} casillas incorrectas, marcadas en rojo.',
+        check_bad_one: 'Hay 1 casilla incorrecta, marcada en rojo.',
+        conflict: 'Hay números repetidos en una fila, columna o caja. Corrígelos primero.',
+        no_solution: 'Este sudoku no tiene solución.',
+        multiple: 'Resuelto. Ojo: este sudoku tiene más de una solución; esta es una de ellas.',
+        solved: 'Resuelto por Nine en {steps} pasos.', solving: 'Resolviendo… {steps} pasos (toca Resolver o Espacio para terminar ya)',
+        too_few: 'Escribe al menos 17 números — un sudoku con menos no puede tener solución única.',
+        hint_used: 'Pista: casilla revelada.', no_cell: 'No quedan casillas vacías.',
+        keys: '1–9 escribir · 0 borrar · N nuevo<br>H pista · V verificar · S resolver'
+    },
+    en: {
+        tagline: 'Play or solve any sudoku', new_puzzle: 'New sudoku',
+        easy: 'Easy', medium: 'Medium', hard: 'Hard', own: 'Enter my own',
+        hint: 'Hint', check: 'Check', solve: 'Solve', reset: 'Reset',
+        time: 'Time', mistakes: 'Mistakes', best: 'Best',
+        mode_play: 'Play mode · {level}', mode_custom: 'Solve mode · type your sudoku and press Solve',
+        won: 'Solved in {time}!', won_record: 'Solved in {time}! New {level} record.',
+        check_ok: 'Everything looks right so far.', check_bad: '{n} cells are wrong, marked in red.',
+        check_bad_one: '1 cell is wrong, marked in red.',
+        conflict: 'Some numbers repeat in a row, column or box. Fix them first.',
+        no_solution: 'This sudoku has no solution.',
+        multiple: 'Solved. Heads up: this sudoku has more than one solution; this is one of them.',
+        solved: 'Solved by Nine in {steps} steps.', solving: 'Solving… {steps} steps (press Solve or Space to finish now)',
+        too_few: "Enter at least 17 numbers — a sudoku with fewer can't have a unique solution.",
+        hint_used: 'Hint: cell revealed.', no_cell: 'No empty cells left.',
+        keys: '1–9 write · 0 erase · N new<br>H hint · V check · S solve'
+    }
+};
+
+function loadSave(){
+    try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); return d && typeof d === 'object' ? d : {}; }
+    catch(err){ return {}; }
+}
+const save = loadSave();
+let lang = save.lang === 'en' ? 'en' : 'es';
+let difficulty = DIFFICULTIES.indexOf(save.difficulty) !== -1 ? save.difficulty : 'easy';
+const bestTimes = {};
+if(save.bestTimes && typeof save.bestTimes === 'object'){
+    DIFFICULTIES.forEach(function(d){ const v = save.bestTimes[d]; if(typeof v === 'number' && v > 0) bestTimes[d] = v; });
+}
+
+let puzzle, board, solution, givens, solverCells, hinted, wrong, mode, mistakes, wrongCounted, started, finishedAt;
+let selected = 40, solver = null, solverSteps = 0, solverBase = null, multiple = false, customInput = null;
+let message = ['mode_play', { level: difficulty }], messageColor = 'muted';
+
+function persist(){
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify({ lang: lang, difficulty: difficulty, bestTimes: bestTimes })); } catch(err){ /* ignore */ }
+}
+
+function fmtInt(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, lang === 'es' ? '.' : ','); }
+function fmtTime(s){
+    s = Math.floor(s);
+    const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+    const pad = function(n){ return String(n).padStart(2, '0'); };
+    return h ? h + ':' + pad(m) + ':' + pad(sec) : m + ':' + pad(sec);
+}
+function t(key, vars){
+    let s = TEXT[lang][key];
+    if(vars) Object.keys(vars).forEach(function(k){
+        let v = vars[k];
+        if(k === 'level') v = TEXT[lang][v];
+        if(k === 'steps' || k === 'n') v = fmtInt(v);
+        s = s.replace('{' + k + '}', v);
+    });
+    return s;
+}
+// messages are kept as keys so they follow language switches
+function flash(key, color, vars){ message = [key, vars || {}]; messageColor = color || 'muted'; }
+
+// ---------- state ----------
+function loadBoard(p, sol, m){
+    puzzle = p.slice(); board = p.slice(); solution = sol; mode = m;
+    givens = new Set(); p.forEach(function(v, i){ if(v && m === 'play') givens.add(i); });
+    solverCells = new Set(); hinted = new Set(); wrong = new Set(); wrongCounted = new Set();
+    mistakes = 0; started = performance.now(); finishedAt = null; solver = null;
+}
+
+function newPuzzle(d){
+    if(solver) finishSolver();
+    difficulty = d;
+    const res = Sudoku.generate(d);
+    loadBoard(res[0], res[1], 'play');
+    selected = board.indexOf(0);
+    flash('mode_play', 'muted', { level: d });
+    persist();
+    render();
+}
+
+function customBoard(restore){
+    if(solver) finishSolver();
+    loadBoard(restore || new Array(81).fill(0), null, 'custom');
+    customInput = board.slice();
+    if(!restore) selected = 0;
+    flash('mode_custom');
+    render();
+}
+
+function reset(){
+    if(solver) finishSolver();
+    if(mode === 'custom'){
+        // after a solve, Reset brings back the puzzle you typed; pressed again, it clears the grid
+        const restore = customInput && customInput.some(Boolean) && board.join() !== customInput.join() ? customInput : null;
+        customBoard(restore);
+    } else {
+        loadBoard(puzzle, solution, 'play');
+        flash('mode_play', 'muted', { level: difficulty });
+        render();
+    }
+}
+
+function elapsed(){ return ((finishedAt !== null ? finishedAt : performance.now()) - started) / 1000; }
+function isLocked(i){ return givens.has(i) || solverCells.has(i) || hinted.has(i); }
+
+function write(value){
+    const i = selected;
+    if(solver || finishedAt !== null || isLocked(i) || board[i] === value) return;
+    board[i] = value;
+    wrong.delete(i);
+    if(mode === 'play' && value && value !== solution[i]){
+        // the same wrong digit in the same cell only counts once
+        const key = i + ':' + value;
+        if(!wrongCounted.has(key)){ wrongCounted.add(key); mistakes++; }
+    }
+    if(mode === 'play') checkWin();
+    render();
+}
+
+function checkWin(){
+    if(board.indexOf(0) !== -1 || board.join() !== solution.join()) return;
+    finishedAt = performance.now();
+    const took = elapsed();
+    const best = bestTimes[difficulty];
+    if(!hinted.size && (best === undefined || took < best)){
+        bestTimes[difficulty] = Math.round(took * 10) / 10;
+        persist();
+        flash('won_record', 'user', { time: fmtTime(took), level: difficulty });
+    } else {
+        flash('won', 'user', { time: fmtTime(took) });
+    }
+}
+
+function hint(){
+    if(solver || finishedAt !== null) return;
+    let sol = solution;
+    if(mode === 'custom'){
+        if(Sudoku.conflicts(board).size){ flash('conflict', 'coral'); render(); return; }
+        sol = Sudoku.solve(board);
+        if(!sol){ flash('no_solution', 'coral'); render(); return; }
+    }
+    let i = selected;
+    if(board[i] && board[i] === sol[i]){
+        i = board.findIndex(function(v, k){ return v !== sol[k]; });
+        if(i === -1){ flash('no_cell'); render(); return; }
+    }
+    board[i] = sol[i];
+    hinted.add(i); wrong.delete(i); selected = i;
+    flash('hint_used', 'solver');
+    if(mode === 'play') checkWin();
+    render();
+}
+
+function check(){
+    if(solver) return;
+    if(mode === 'custom'){
+        const bad = Sudoku.conflicts(board);
+        wrong = bad;
+        flash(bad.size ? 'conflict' : 'check_ok', bad.size ? 'coral' : 'user');
+    } else {
+        wrong = new Set();
+        board.forEach(function(v, i){ if(v && v !== solution[i]) wrong.add(i); });
+        if(wrong.size) flash(wrong.size === 1 ? 'check_bad_one' : 'check_bad', 'coral', { n: wrong.size });
+        else flash('check_ok', 'user');
+    }
+    render();
+}
+
+function startSolver(){
+    if(solver){ finishSolver(); return; }
+    if(finishedAt !== null) return;
+    const base = mode === 'custom' ? board.slice() : puzzle.slice();
+    if(mode === 'custom'){
+        customInput = base.slice();
+        const bad = Sudoku.conflicts(base);
+        if(bad.size){ wrong = bad; flash('conflict', 'coral'); render(); return; }
+        if(base.filter(Boolean).length < 17){ flash('too_few', 'coral'); render(); return; }
+        multiple = Sudoku.countSolutions(base) > 1;
+        givens = new Set(); base.forEach(function(v, i){ if(v) givens.add(i); });
+    } else {
+        multiple = false;
+        hinted.clear();
+    }
+    board = base;
+    wrong = new Set();
+    solverBase = new Set(); base.forEach(function(v, i){ if(v) solverBase.add(i); });
+    solverCells = new Set();
+    solver = Sudoku.solveSteps(base);
+    solverSteps = 0;
+    render();
+}
+
+function advanceSolver(budget){
+    for(let n = 0; n < budget && solver; n++){
+        const step = solver.next().value || ['fail'];
+        if(step[0] === 'place'){ board[step[1]] = step[2]; solverCells.add(step[1]); solverSteps++; }
+        else if(step[0] === 'remove'){ board[step[1]] = 0; solverCells.delete(step[1]); }
+        else if(step[0] === 'done'){
+            board = step[1];
+            solverCells = new Set(); for(let i = 0; i < 81; i++) if(!solverBase.has(i)) solverCells.add(i);
+            solver = null;
+            finishedAt = performance.now();
+            if(multiple) flash('multiple', 'solver'); else flash('solved', 'solver', { steps: solverSteps });
+        } else {
+            solver = null;
+            flash('no_solution', 'coral');
+        }
+    }
+}
+function finishSolver(){ while(solver) advanceSolver(5000); render(); }
+
+// ---------- rendering ----------
+const boardEl = document.getElementById('board');
+const cells = [];
+for(let i = 0; i < 81; i++){
+    const el = document.createElement('div');
+    el.className = 'cell';
+    el.addEventListener('pointerdown', function(){ selected = i; render(); });
+    boardEl.appendChild(el);
+    cells.push(el);
+}
+const pad = document.getElementById('pad');
+[1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫'].forEach(function(v){
+    const b = document.createElement('button');
+    b.textContent = v;
+    b.addEventListener('click', function(){ write(v === '⌫' ? 0 : v); });
+    pad.appendChild(b);
+});
+
+function render(){
+    const sr = Math.floor(selected / 9), sc = selected % 9, selBox = Sudoku.boxOf(sr, sc);
+    const selValue = board[selected];
+    const conflicts = Sudoku.conflicts(board);
+    for(let i = 0; i < 81; i++){
+        const r = Math.floor(i / 9), c = i % 9, v = board[i];
+        const el = cells[i];
+        let cls = 'cell';
+        if(r === sr || c === sc || Sudoku.boxOf(r, c) === selBox) cls += ' peer';
+        if(selValue && v === selValue) cls += ' same';
+        if(conflicts.has(i) || wrong.has(i)) cls += ' bad';
+        if(i === selected) cls += ' sel';
+        if(v){
+            if(givens.has(i)) cls += ' given';
+            else if(solverCells.has(i)) cls += ' solver';
+            else if(hinted.has(i)) cls += ' hinted';
+        }
+        el.className = cls;
+        el.textContent = v || '';
+    }
+    document.querySelectorAll('.btn.level').forEach(function(b){ b.classList.toggle('active', mode === 'play' && b.getAttribute('data-level') === difficulty); });
+    document.getElementById('ownBtn').classList.toggle('active', mode === 'custom');
+    renderStatus();
+}
+
+function renderStatus(){
+    const stats = [];
+    if(mode === 'play'){
+        stats.push([t('time'), fmtTime(elapsed())], [t('mistakes'), String(mistakes)], [t('best'), bestTimes[difficulty] ? fmtTime(bestTimes[difficulty]) : '—']);
+    }
+    document.getElementById('stats').innerHTML = stats.map(function(s){
+        return '<div><div class="stat-label">' + s[0] + '</div><div class="stat-value">' + s[1] + '</div></div>';
+    }).join('');
+    const msg = document.getElementById('message');
+    msg.textContent = solver ? t('solving', { steps: solverSteps }) : t(message[0], message[1]);
+    msg.style.color = solver ? COLORS.solver : COLORS[messageColor];
+}
+
+function setLang(l){
+    lang = l;
+    document.documentElement.lang = l;
+    document.getElementById('langEs').classList.toggle('active', l === 'es');
+    document.getElementById('langEn').classList.toggle('active', l === 'en');
+    document.querySelectorAll('[data-t]').forEach(function(el){ el.textContent = t(el.getAttribute('data-t')); });
+    document.getElementById('keys').innerHTML = t('keys');
+    persist();
+    render();
+}
+
+// ---------- input ----------
+document.addEventListener('keydown', function(e){
+    if(e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+    if(k === 'l' || k === 'L'){ setLang(lang === 'es' ? 'en' : 'es'); return; }
+    if(solver){
+        if(k === ' ' || k === 'Escape' || k === 'Enter'){ e.preventDefault(); finishSolver(); }
+        return;
+    }
+    const r = Math.floor(selected / 9), c = selected % 9;
+    const moves = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+    if(moves[k]){
+        e.preventDefault();
+        selected = ((r + moves[k][0] + 9) % 9) * 9 + (c + moves[k][1] + 9) % 9;
+        render();
+    } else if(k >= '1' && k <= '9'){ write(Number(k)); }
+    else if(k === '0' || k === 'Backspace' || k === 'Delete'){ write(0); }
+    else if(k === 'h' || k === 'H'){ hint(); }
+    else if(k === 'v' || k === 'V'){ check(); }
+    else if(k === 's' || k === 'S'){ startSolver(); }
+    else if(k === 'n' || k === 'N'){ mode === 'custom' ? customBoard() : newPuzzle(difficulty); }
+});
+
+let frames = 0;
+function tick(){
+    if(solver){
+        // slow enough to watch at first, then speeds up on long searches
+        advanceSolver(solverSteps < 200 ? 3 : solverSteps < 2000 ? 40 : 400);
+        render();
+    } else if(++frames % 15 === 0 && mode === 'play'){
+        renderStatus();
+    }
+    requestAnimationFrame(tick);
+}
+
+newPuzzle(difficulty);
+setLang(lang);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

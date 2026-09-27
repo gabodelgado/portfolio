@@ -2,6 +2,8 @@
 
 Play sudoku, or type in the one you're stuck on and watch it get solved.
 
+**[▶ Play it in your browser](https://gabodelgado.github.io/portfolio/Nine/web/)**
+
 ![Nine](screenshot.png)
 
 ## Highlights
@@ -34,3 +36,7 @@ From the repository's root folder:
 pip install -r requirements.txt
 python Nine/main.py
 ```
+
+## Browser version
+
+[`web/`](web/) holds a JavaScript port so the game can be played without installing anything. It follows the Python version's rules, colors and tuning, and is drawn with HTML, with an on-screen number pad on phones. Records are kept in the browser.

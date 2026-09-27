@@ -1,5 +1,7 @@
 # Gabriel Delgado — Portfolio
 
+**[▶ Visit the portfolio site](https://gabodelgado.github.io/portfolio/)**
+
 Six small, finished projects: three web apps written in plain HTML, CSS and JavaScript, and three desktop games in Python. Each one has its own look and personality, runs in Spanish and English, and formats numbers the way each language expects (`1.234,56` / `1,234.56`).
 
 ## Web apps
@@ -12,17 +14,19 @@ Six small, finished projects: three web apps written in plain HTML, CSS and Java
 
 ## Python games
 
+Written in Python with pygame. Each one also has a browser version, so you can play without installing anything.
+
 | | |
 |---|---|
-| [![Volley](Volley/screenshot.png)](Volley/) | **[Volley](Volley/)** — Neon arcade Pong against a CPU with three difficulty levels, or against a friend on the same keyboard. |
-| [![Keystroke](Keystroke/screenshot.png)](Keystroke/) | **[Keystroke](Keystroke/)** — A typing speed test with a typewriter feel. Measures words per minute and accuracy, and keeps your best runs. |
-| [![Nine](Nine/screenshot.png)](Nine/) | **[Nine](Nine/)** — Play sudoku, or type in any puzzle and watch the solver work it out step by step. |
+| [![Volley](Volley/screenshot.png)](Volley/) | **[Volley](Volley/)** · [▶ Play in browser](https://gabodelgado.github.io/portfolio/Volley/web/) — Neon arcade Pong against a CPU with three difficulty levels, or against a friend on the same keyboard. |
+| [![Keystroke](Keystroke/screenshot.png)](Keystroke/) | **[Keystroke](Keystroke/)** · [▶ Play in browser](https://gabodelgado.github.io/portfolio/Keystroke/web/) — A typing speed test with a typewriter feel. Measures words per minute and accuracy, and keeps your best runs. |
+| [![Nine](Nine/screenshot.png)](Nine/) | **[Nine](Nine/)** · [▶ Play in browser](https://gabodelgado.github.io/portfolio/Nine/web/) — Play sudoku, or type in any puzzle and watch the solver work it out step by step. |
 
 ## Running them
 
 **Web apps:** try them live with the links above, or open the app's `index.html` in any modern browser. There's nothing to install or build.
 
-**Games:** you need Python 3.9 or newer.
+**Games:** play them in the browser with the links above. To run the original Python versions you need Python 3.9 or newer.
 
 ```bash
 python3 -m venv .venv

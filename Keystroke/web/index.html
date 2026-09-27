@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keystroke</title>
+<meta name="description" content="A typing speed test with a typewriter soul. Browser version of the Python app.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⌨️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --paper: #f3ead7; --card: #fbf6ea; --ink: #2b2622; --faint: #b9ad96; --soft: #7a6e5c;
+        --red: #b3362b; --green: #3d6e48; --rule: #e2d6be; --margin: #e6aaa0;
+        --type: 'American Typewriter', 'Special Elite', 'Courier New', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { background: var(--paper); }
+    body { font-family: var(--type); color: var(--ink); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+    .back { position: fixed; left: 14px; top: 10px; font-size: 12px; color: var(--soft); text-decoration: none; }
+    .back:hover { color: var(--red); }
+
+    .sheet {
+        position: relative; width: 100%; max-width: 860px; min-height: 540px; background: var(--card);
+        border-radius: 6px; box-shadow: 0 6px 0 #e1d4ba, 0 18px 40px rgba(90,70,40,0.12);
+        padding: 44px 48px 40px 96px;
+        background-image: linear-gradient(var(--rule) 1px, transparent 1px);
+        background-size: 100% 34px; background-position: 0 110px;
+    }
+    .sheet::before { content: ''; position: absolute; left: 70px; top: 10px; bottom: 10px; width: 2px; background: var(--margin); }
+    .lang { position: absolute; top: 18px; right: 22px; font-size: 14px; }
+    .lang button { background: none; border: none; font: inherit; color: var(--faint); cursor: pointer; padding: 2px 4px; }
+    .lang button.active { color: var(--red); }
+
+    .screen { display: none; text-align: center; }
+    .screen.show { display: block; }
+
+    .logo { font-size: 56px; font-weight: 700; letter-spacing: -1px; margin-top: 10px; }
+    .tagline { color: var(--soft); font-size: 18px; margin-top: 4px; }
+    .accent { color: var(--red); font-size: 20px; margin-top: 10px; }
+    h2 { color: var(--red); font-size: 32px; margin-top: 44px; }
+    .ask { font-size: 19px; margin: 12px 0 22px; }
+    .name-input {
+        width: min(420px, 100%); padding: 14px; font: 26px var(--type); color: var(--ink); text-align: center;
+        background: #fffcf4; border: 2px solid var(--ink); border-radius: 6px; outline: none; caret-color: var(--red);
+    }
+    .hint { color: var(--soft); font-size: 14px; margin-top: 14px; }
+    .hint.faint { color: var(--faint); }
+
+    .label { color: var(--soft); font-size: 14px; margin-top: 36px; }
+    .keys { display: flex; justify-content: center; gap: 22px; margin-top: 12px; }
+    .keycap {
+        width: 96px; height: 52px; border-radius: 26px; border: 2px solid var(--ink); background: #fffcf4; color: var(--ink);
+        font: 20px var(--type); cursor: pointer; box-shadow: 0 4px 0 #cdc0a6; transition: transform .08s, box-shadow .08s;
+    }
+    .keycap:active { transform: translateY(3px); box-shadow: 0 1px 0 #cdc0a6; }
+    .keycap.selected { background: var(--ink); color: var(--card); }
+    .start-btn { margin-top: 30px; background: none; border: none; font: 21px var(--type); color: var(--ink); cursor: pointer; border-bottom: 2px solid var(--red); padding-bottom: 2px; }
+    .records { margin: 12px auto 0; font-size: 15px; border-collapse: collapse; }
+    .records td { padding: 3px 14px; text-align: left; }
+    .records tr:first-child td { color: var(--red); }
+    .records td.muted { color: var(--soft); }
+    .records td.date { text-align: right; color: var(--soft); }
+
+    .test-top { display: flex; justify-content: space-between; align-items: flex-start; text-align: left; }
+    .clock { font-size: 34px; font-weight: 700; line-height: 1; }
+    .clock.low { color: var(--red); }
+    .clock-label, .live-sub { color: var(--soft); font-size: 14px; margin-top: 4px; }
+    .live { text-align: right; min-height: 52px; }
+    .live-wpm { font-size: 21px; }
+    .words {
+        position: relative; margin-top: 56px; height: 204px; overflow: hidden; text-align: left;
+        font-size: 30px; line-height: 68px; cursor: text; word-break: keep-all;
+    }
+    .words-inner { transition: transform .18s ease-out; }
+    .words .w { display: inline-block; white-space: pre; }
+    .c { color: var(--faint); position: relative; }
+    .c.ok { color: var(--ink); }
+    .c.bad { color: var(--red); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+    .c.caret::before { content: ''; position: absolute; left: -2px; top: 14px; height: 36px; width: 3px; background: var(--red); animation: blink 0.9s steps(1) infinite; }
+    .typing .c.caret::before { animation: none; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .trap { position: absolute; opacity: 0; width: 1px; height: 1px; left: 0; top: 0; pointer-events: none; }
+    .focus-note { color: var(--soft); font-size: 14px; margin-top: 20px; min-height: 18px; }
+
+    .result-label { color: var(--soft); font-size: 20px; margin-top: 16px; }
+    .big { font-size: 96px; font-weight: 700; line-height: 1.1; margin-top: 18px; }
+    .stamp { position: absolute; right: 70px; top: 120px; color: var(--red); font-size: 30px; font-weight: 700; transform: rotate(-8deg); border: 3px solid var(--red); padding: 4px 12px; border-radius: 4px; opacity: .9; }
+    .acc { font-size: 34px; font-weight: 700; margin-top: 30px; }
+    .acc.good { color: var(--green); }
+    .detail { color: var(--soft); font-size: 15px; margin-top: 8px; }
+    .actions { margin-top: 40px; display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; }
+    .link-btn { background: none; border: none; font: 20px var(--type); color: var(--ink); cursor: pointer; border-bottom: 2px solid var(--red); }
+    .link-btn.soft { color: var(--soft); border-color: var(--faint); }
+    .small-actions { margin-top: 18px; }
+    .small-actions .link-btn { font-size: 15px; }
+
+    button:focus-visible, .name-input:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+
+    @media (max-width: 640px) {
+        body { padding: 36px 10px 16px; align-items: flex-start; }
+        .sheet { padding: 38px 18px 28px 40px; min-height: 0; }
+        .sheet::before { left: 26px; }
+        .logo { font-size: 42px; }
+        .words { font-size: 22px; line-height: 50px; height: 150px; margin-top: 36px; }
+        .c.caret::before { top: 10px; height: 28px; }
+        .keys { gap: 10px; }
+        .keycap { width: 80px; }
+        .stamp { position: static; display: inline-block; margin-top: 12px; }
+        .big { font-size: 72px; }
+    }
+</style>
+</head>
+<body>
+<a class="back" href="../../">← portfolio</a>
+<main class="sheet">
+    <div class="lang"><button id="langEs" onclick="setLang('es')">ES</button>·<button id="langEn" onclick="setLang('en')">EN</button></div>
+
+    <section class="screen" id="welcome">
+        <div class="logo">Keystroke</div>
+        <div class="tagline" data-t="tagline"></div>
+        <h2 data-t="welcome"></h2>
+        <p class="ask" data-t="ask_name"></p>
+        <input class="name-input" id="nameInput" maxlength="20" autocomplete="given-name" spellcheck="false">
+        <p class="hint" data-t="name_hint"></p>
+    </section>
+
+    <section class="screen" id="menu">
+        <div class="logo">Keystroke</div>
+        <div class="accent" id="hello"></div>
+        <div class="label" data-t="duration"></div>
+        <div class="keys" id="durationKeys"></div>
+        <button class="start-btn" onclick="startTest()" data-t="start"></button>
+        <div class="label" id="recordsTitle"></div>
+        <table class="records" id="records"></table>
+        <p class="hint" data-t="menu_hint" style="margin-top:34px;"></p>
+        <p class="hint faint"><button class="link-btn soft" style="font-size:14px;" onclick="showWelcome()" data-t="change_name"></button></p>
+    </section>
+
+    <section class="screen" id="test">
+        <div class="test-top">
+            <div><div class="clock" id="clock">30</div><div class="clock-label" data-t="time_left"></div></div>
+            <div class="live"><div class="live-wpm" id="liveWpm"></div><div class="live-sub" id="liveAcc"></div></div>
+        </div>
+        <div class="words" id="words"><div class="words-inner" id="wordsInner"></div></div>
+        <textarea class="trap" id="trap" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+        <p class="focus-note" id="focusNote"></p>
+        <div class="actions small-actions">
+            <button class="link-btn soft" onclick="startTest()" data-t="restart"></button>
+            <button class="link-btn soft" onclick="showMenu()" data-t="menu"></button>
+        </div>
+    </section>
+
+    <section class="screen" id="results">
+        <div class="result-label" data-t="result_title"></div>
+        <div class="big" id="resWpm"></div>
+        <div class="result-label" style="margin-top:0;" data-t="wpm_long"></div>
+        <div class="stamp" id="stamp" data-t="new_record"></div>
+        <div class="acc" id="resAcc"></div>
+        <div class="detail" id="resChars"></div>
+        <div class="detail" id="resRaw"></div>
+        <div class="actions">
+            <button class="link-btn" onclick="startTest()" data-t="again"></button>
+            <button class="link-btn soft" onclick="showMenu()" data-t="menu"></button>
+        </div>
+    </section>
+</main>
+
+<script>
+// Browser port of Keystroke/main.py — same word lists, scoring and records.
+const DURATIONS = [15, 30, 60];
+const LIVE_STATS_AFTER = 2;
+const SAVE_KEY = 'keystrokeSave';
+
+const WORDS = {
+    es: ("de la que el en y a los se del las un por con no una su para es al lo como más pero sus le ya o " +
+        "este sí porque esta entre cuando muy sin sobre también me hasta hay donde quien desde todo nos " +
+        "durante todos uno les ni contra otros ese eso ante ellos esto mí antes algunos qué unos yo otro " +
+        "otras otra él tanto esa estos mucho quienes nada muchos cual poco ella estar estas algunas algo " +
+        "nosotros casa tiempo vida día mundo año hombre parte país ciudad forma caso manera lugar trabajo " +
+        "gobierno momento agua noche familia historia punto mujer mano ojos cosa tierra camino fuerza " +
+        "palabra padre madre nombre libro calle mesa puerta café música ciencia idea viaje ventana " +
+        "hacer decir poder ir ver dar saber querer llegar pasar deber poner parecer quedar creer hablar " +
+        "llevar dejar seguir encontrar llamar venir pensar salir volver tomar conocer vivir sentir tratar " +
+        "mirar contar empezar esperar buscar existir entrar trabajar escribir perder producir ocurrir " +
+        "entender pedir recibir recordar terminar permitir aparecer conseguir comenzar servir sacar " +
+        "grande nuevo mismo bueno mejor largo claro fácil difícil rápido lento feliz joven viejo alto " +
+        "bajo fuerte libre simple cierto propio único último pequeño general mayor posible siempre nunca " +
+        "ahora luego aquí allí hoy mañana tarde pronto bien mal así juntos además mientras según").split(' '),
+    en: ("the be to of and a in that have it for not on with he as you do at this but his by from they " +
+        "we say her she or an will my one all would there their what so up out if about who get which go " +
+        "me when make can like time no just him know take people into year your good some could them see " +
+        "other than then now look only come its over think also back after use two how our work first " +
+        "well way even new want because any these give day most us great world between house under " +
+        "never last place small found still own point city sound light story music water night family " +
+        "window coffee river paper letter garden number market friend answer country picture morning " +
+        "should around while might every those both again move right large often thing turn long " +
+        "change follow start begin write read learn keep bring hold stand open close build grow travel " +
+        "remember explore create finish simple quick clear strong quiet bright early later always " +
+        "together enough before through where little another without problem system program " +
+        "question during company important until school across second almost against").split(' ')
+};
+Object.keys(WORDS).forEach(function(k){ WORDS[k] = Array.from(new Set(WORDS[k])); });
+
+const TEXT = {
+    es: {
+        tagline: 'Prueba tu velocidad de escritura', welcome: 'Bienvenido',
+        ask_name: '¿Cómo te llamas? Guardaremos tus récords con tu nombre.', name_hint: 'Escribe tu nombre y presiona Enter',
+        hello: 'Hola, {name}', duration: 'Duración', seconds: '{n} s', start: 'Presiona Enter para comenzar',
+        menu_hint: 'Flechas duración · Enter comenzar', records: 'Tus mejores marcas · {n} s',
+        no_records: 'Aún no hay marcas. ¡Estrena la máquina!', wpm: 'ppm', wpm_long: 'palabras por minuto',
+        accuracy: 'precisión', time_left: 'segundos',
+        begin_typing: 'Empieza a escribir cuando quieras — el reloj arranca con tu primera tecla',
+        tap_to_type: 'Toca el texto para escribir', restart: 'Reiniciar (Tab)',
+        result_title: 'Resultado', new_record: '¡Nuevo récord!',
+        chars: 'Caracteres: {ok} correctos · {bad} errores', raw: 'Velocidad bruta: {n} ppm',
+        again: 'Repetir (Enter)', menu: 'Menú (Esc)', change_name: 'Cambiar nombre',
+        months: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+    },
+    en: {
+        tagline: 'Test your typing speed', welcome: 'Welcome',
+        ask_name: "What's your name? We'll keep your records under it.", name_hint: 'Type your name and press Enter',
+        hello: 'Hi, {name}', duration: 'Duration', seconds: '{n} s', start: 'Press Enter to start',
+        menu_hint: 'Arrows duration · Enter start', records: 'Your best runs · {n} s',
+        no_records: 'No runs yet. Take the typewriter for a spin!', wpm: 'wpm', wpm_long: 'words per minute',
+        accuracy: 'accuracy', time_left: 'seconds',
+        begin_typing: "Start typing whenever you're ready — the clock starts with your first key",
+        tap_to_type: 'Tap the text to type', restart: 'Restart (Tab)',
+        result_title: 'Result', new_record: 'New record!',
+        chars: 'Characters: {ok} correct · {bad} errors', raw: 'Raw speed: {n} wpm',
+        again: 'Try again (Enter)', menu: 'Menu (Esc)', change_name: 'Change name',
+        months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    }
+};
+
+function loadSave(){
+    try { const d = JSON.parse(localStorage.getItem(SAVE_KEY)); return d && typeof d === 'object' ? d : {}; }
+    catch(err){ return {}; }
+}
+const save = loadSave();
+let lang = save.lang === 'en' ? 'en' : 'es';
+let duration = DURATIONS.indexOf(save.duration) !== -1 ? save.duration : 30;
+let playerName = typeof save.name === 'string' ? save.name.slice(0, 20) : '';
+let records = Array.isArray(save.records) ? save.records.filter(function(r){
+    return r && typeof r.wpm === 'number' && typeof r.accuracy === 'number' && DURATIONS.indexOf(r.duration) !== -1;
+}) : [];
+let screen = null;
+let test = null;
+
+function persist(){
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify({ lang: lang, duration: duration, name: playerName, records: records })); }
+    catch(err){ /* ignore */ }
+}
+
+function t(key, vars){
+    let s = TEXT[lang][key];
+    if(vars) Object.keys(vars).forEach(function(k){ s = s.replace('{' + k + '}', vars[k]); });
+    return s;
+}
+
+// 1.234,5 in Spanish · 1,234.5 in English
+function fmtNum(n, decimals){
+    decimals = decimals || 0;
+    const parts = Math.abs(n).toFixed(decimals).split('.');
+    const group = lang === 'es' ? '.' : ',', dec = lang === 'es' ? ',' : '.';
+    return (n < 0 ? '-' : '') + parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, group) + (parts[1] ? dec + parts[1] : '');
+}
+
+function fmtDate(iso){
+    const d = new Date(iso);
+    if(isNaN(d)) return '';
+    const m = t('months')[d.getMonth()];
+    return lang === 'es' ? d.getDate() + ' ' + m + ' ' + d.getFullYear() : m + ' ' + d.getDate() + ', ' + d.getFullYear();
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+// ---------- the test ----------
+function newTest(){
+    const words = [];
+    function extend(n){
+        const pool = WORDS[lang];
+        for(let i = 0; i < n; i++){
+            let w;
+            do { w = pool[Math.floor(Math.random() * pool.length)]; } while(w === words[words.length - 1]);
+            words.push(w);
+        }
+    }
+    extend(250);
+    return {
+        words: words, target: words.join(' '), typed: '', startedAt: null, finished: false, keystrokes: 0, errors: 0,
+        extend: function(n){ extend(n); this.target = this.words.join(' '); }
+    };
+}
+
+function elapsed(){ return test.startedAt === null ? 0 : Math.min((performance.now() - test.startedAt) / 1000, duration); }
+function correctChars(){ let n = 0; for(let i = 0; i < test.typed.length; i++) if(test.typed[i] === test.target[i]) n++; return n; }
+function wpm(){ return correctChars() / 5 / (Math.max(elapsed(), 1) / 60); }
+function rawWpm(){ return test.typed.length / 5 / (Math.max(elapsed(), 1) / 60); }
+function accuracy(){ return test.keystrokes ? Math.max(0, (test.keystrokes - test.errors) / test.keystrokes * 100) : 100; }
+
+function typeText(text){
+    if(!test || test.finished) return;
+    if(test.startedAt === null) test.startedAt = performance.now();
+    for(const ch of text.replace(/\n/g, '')){
+        if(test.typed.length >= test.target.length - 20){ test.extend(100); renderWords(); }
+        const expected = test.target[test.typed.length];
+        test.keystrokes++;
+        if(ch !== expected) test.errors++;
+        test.typed += ch;
+    }
+    updateChars();
+}
+
+function backspace(wholeWord){
+    if(!test || test.finished || !test.typed) return;
+    if(wholeWord){
+        const trimmed = test.typed.replace(/ +$/, '');
+        const cut = trimmed.lastIndexOf(' ');
+        test.typed = cut !== -1 ? trimmed.slice(0, cut + 1) : '';
+    } else {
+        test.typed = test.typed.slice(0, -1);
+    }
+    updateChars();
+}
+
+// ---------- rendering ----------
+let charEls = [];
+function renderWords(){
+    const inner = document.getElementById('wordsInner');
+    let html = '', idx = 0;
+    test.words.forEach(function(w, wi){
+        html += '<span class="w">';
+        for(const ch of w){ html += '<span class="c" data-i="' + idx + '">' + escapeHtml(ch) + '</span>'; idx++; }
+        if(wi < test.words.length - 1){ html += '<span class="c" data-i="' + idx + '"> </span>'; idx++; }
+        html += '</span>';
+    });
+    inner.innerHTML = html;
+    charEls = Array.from(inner.querySelectorAll('.c'));
+    updateChars(true);
+}
+
+let lastCaret = 0;
+function updateChars(full){
+    const typed = test.typed;
+    const from = full ? 0 : Math.max(0, Math.min(lastCaret, typed.length) - 1);
+    const to = full ? charEls.length : Math.min(charEls.length, Math.max(lastCaret, typed.length) + 2);
+    for(let i = from; i < to; i++){
+        const el = charEls[i];
+        let cls = 'c';
+        if(i < typed.length){
+            const ok = typed[i] === test.target[i];
+            cls += ok ? ' ok' : ' bad';
+            el.textContent = !ok && test.target[i] === ' ' ? '·' : test.target[i];
+        } else if(el.textContent === '·'){
+            el.textContent = ' ';
+        }
+        if(i === typed.length) cls += ' caret';
+        el.className = cls;
+    }
+    lastCaret = typed.length;
+    document.getElementById('words').classList.toggle('typing', test.startedAt !== null);
+    scrollToCaret();
+}
+
+// keep the caret on the second visible line, like the desktop version
+function scrollToCaret(){
+    const el = charEls[test.typed.length];
+    if(!el) return;
+    const lineH = parseFloat(getComputedStyle(document.getElementById('words')).lineHeight);
+    const line = Math.round(el.offsetTop / lineH);
+    const shift = Math.max(0, line - 1) * lineH;
+    document.getElementById('wordsInner').style.transform = 'translateY(' + (-shift) + 'px)';
+}
+
+function updateClock(){
+    const left = test.startedAt === null ? duration : duration - elapsed();
+    const clock = document.getElementById('clock');
+    clock.textContent = Math.ceil(left - 0.001);
+    clock.classList.toggle('low', test.startedAt !== null && left <= 5);
+    const show = test.startedAt !== null && elapsed() >= LIVE_STATS_AFTER;
+    document.getElementById('liveWpm').textContent = show ? fmtNum(wpm()) + ' ' + t('wpm') : '';
+    document.getElementById('liveAcc').textContent = show ? fmtNum(accuracy()) + ' % ' + t('accuracy') : '';
+    if(test.startedAt !== null && !test.finished && elapsed() >= duration){
+        test.finished = true;
+        finishTest();
+    }
+}
+
+// ---------- screens ----------
+function show(id){
+    screen = id;
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.toggle('show', s.id === id); });
+}
+
+function applyLang(){
+    document.documentElement.lang = lang;
+    document.getElementById('langEs').classList.toggle('active', lang === 'es');
+    document.getElementById('langEn').classList.toggle('active', lang === 'en');
+    document.querySelectorAll('[data-t]').forEach(function(el){ el.textContent = t(el.getAttribute('data-t')); });
+}
+
+function setLang(l){
+    lang = l;
+    persist();
+    applyLang();
+    if(screen === 'menu') showMenu();
+    else if(screen === 'test') startTest();
+    else if(screen === 'results') renderResults();
+}
+
+function showWelcome(){
+    show('welcome');
+    const input = document.getElementById('nameInput');
+    input.value = playerName;
+    input.focus();
+}
+
+function showMenu(){
+    show('menu');
+    // a hidden name field or typing area can keep focus and swallow the menu's keys
+    if(document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+    document.getElementById('hello').textContent = t('hello', { name: playerName });
+    document.getElementById('durationKeys').innerHTML = DURATIONS.map(function(d){
+        return '<button class="keycap' + (d === duration ? ' selected' : '') + '" onclick="setDuration(' + d + ')">' + t('seconds', { n: d }) + '</button>';
+    }).join('');
+    document.getElementById('recordsTitle').textContent = t('records', { n: duration });
+    const best = records.filter(function(r){ return r.duration === duration; }).sort(function(a, b){ return b.wpm - a.wpm; }).slice(0, 5);
+    document.getElementById('records').innerHTML = best.length ? best.map(function(r, i){
+        return '<tr><td>' + (i + 1) + '.</td><td>' + fmtNum(r.wpm) + ' ' + t('wpm') + '</td><td class="muted">' + fmtNum(r.accuracy) + ' %</td><td class="date">' + fmtDate(r.date) + '</td></tr>';
+    }).join('') : '<tr><td class="muted">' + t('no_records') + '</td></tr>';
+}
+
+function setDuration(d){ duration = d; persist(); showMenu(); }
+
+const trap = document.getElementById('trap');
+const isTouch = window.matchMedia('(pointer: coarse)').matches;
+
+function focusTrap(){ trap.value = ''; trap.focus({ preventScroll: true }); }
+
+function startTest(){
+    test = newTest();
+    show('test');
+    renderWords();
+    updateClock();
+    document.getElementById('focusNote').textContent = isTouch ? t('tap_to_type') : t('begin_typing');
+    focusTrap();
+}
+
+let lastResult = null;
+function finishTest(){
+    const w = Math.round(wpm());
+    const previous = records.filter(function(r){ return r.duration === duration; }).sort(function(a, b){ return b.wpm - a.wpm; });
+    lastResult = { wpm: w, raw: Math.round(rawWpm()), accuracy: accuracy(), correct: correctChars(), errors: test.errors,
+        record: w > 0 && (!previous.length || w > previous[0].wpm) };
+    if(w > 0){
+        records.push({ wpm: w, accuracy: Math.round(accuracy() * 10) / 10, duration: duration, lang: lang, date: new Date().toISOString() });
+        // keep storage small: the best 20 runs per duration
+        records = DURATIONS.reduce(function(acc, d){
+            return acc.concat(records.filter(function(r){ return r.duration === d; }).sort(function(a, b){ return b.wpm - a.wpm; }).slice(0, 20));
+        }, []);
+        persist();
+    }
+    trap.blur();
+    renderResults();
+}
+
+function renderResults(){
+    show('results');
+    const r = lastResult;
+    document.getElementById('resWpm').textContent = fmtNum(r.wpm);
+    document.getElementById('stamp').style.display = r.record ? '' : 'none';
+    const acc = document.getElementById('resAcc');
+    acc.textContent = fmtNum(r.accuracy, 1) + ' % ' + t('accuracy');
+    acc.classList.toggle('good', r.accuracy >= 95);
+    document.getElementById('resChars').textContent = t('chars', { ok: fmtNum(r.correct), bad: fmtNum(r.errors) });
+    document.getElementById('resRaw').textContent = t('raw', { n: fmtNum(r.raw) });
+}
+
+// ---------- input ----------
+// Characters arrive through a hidden textarea so dead keys (´ + a = á) and phone keyboards work
+trap.addEventListener('input', function(e){
+    if(e.isComposing) return;
+    if(trap.value){ typeText(trap.value); trap.value = ''; }
+});
+trap.addEventListener('compositionend', function(){
+    if(trap.value){ typeText(trap.value); trap.value = ''; }
+});
+trap.addEventListener('keydown', function(e){
+    if(e.key === 'Backspace'){ e.preventDefault(); backspace(e.altKey || e.ctrlKey); }
+});
+trap.addEventListener('blur', function(){
+    if(screen === 'test' && isTouch) document.getElementById('focusNote').textContent = t('tap_to_type');
+});
+document.getElementById('words').addEventListener('click', focusTrap);
+
+document.getElementById('nameInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && this.value.trim()){
+        playerName = this.value.trim().slice(0, 20);
+        persist();
+        showMenu();
+    } else if(e.key === 'Escape' && playerName){
+        showMenu();
+    }
+});
+
+document.addEventListener('keydown', function(e){
+    if(screen === 'welcome') return;
+    if(screen === 'menu'){
+        if(e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+            const step = e.key === 'ArrowLeft' ? -1 : 1;
+            setDuration(DURATIONS[(DURATIONS.indexOf(duration) + step + DURATIONS.length) % DURATIONS.length]);
+        } else if(e.key === 'Enter'){ e.preventDefault(); startTest(); }
+    } else if(screen === 'test'){
+        if(e.key === 'Escape'){ showMenu(); }
+        else if(e.key === 'Tab'){ e.preventDefault(); startTest(); }
+        else if(e.target !== trap && e.key.length === 1 && !e.metaKey && !e.ctrlKey){ focusTrap(); }
+    } else if(screen === 'results'){
+        if(e.key === 'Enter' || e.key === 'Tab'){ e.preventDefault(); startTest(); }
+        else if(e.key === 'Escape'){ showMenu(); }
+    }
+});
+
+setInterval(function(){ if(screen === 'test' && test) updateClock(); }, 100);
+window.addEventListener('resize', function(){ if(screen === 'test' && test) scrollToCaret(); });
+
+applyLang();
+if(playerName) showMenu(); else showWelcome();
+</script>
+</body>
+</html>

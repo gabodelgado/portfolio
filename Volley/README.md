@@ -2,6 +2,8 @@
 
 A neon arcade take on Pong. Play the CPU at three difficulty levels, or a friend on the same keyboard. First to 7 wins.
 
+**[▶ Play it in your browser](https://gabodelgado.github.io/portfolio/Volley/web/)**
+
 ![Volley](screenshot.png)
 
 ## Highlights
@@ -31,3 +33,7 @@ From the repository's root folder:
 pip install -r requirements.txt
 python Volley/main.py
 ```
+
+## Browser version
+
+[`web/`](web/) holds a JavaScript port so the game can be played without installing anything. It follows the Python version's rules, colors and tuning, and is drawn with the canvas, with touch controls on phones (drag your finger to move). Records are kept in the browser.
