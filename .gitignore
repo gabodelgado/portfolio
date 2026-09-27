@@ -5,8 +5,6 @@ __pycache__/
 # per-player saves (records, language) for the Python games
 data.json
 
-# local dev server config
-.claude/
 
 # test tooling
 node_modules/
