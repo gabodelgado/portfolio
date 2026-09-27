@@ -2,6 +2,8 @@
 
 A personal finance planner: enter what you earn and what you spend, and see what you can save per paycheck and how long a goal will take.
 
+**[▶ Try it live](https://gabodelgado.github.io/portfolio/Waypoint/)**
+
 ![Waypoint](screenshot.png)
 
 ## What it does

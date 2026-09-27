@@ -6,9 +6,9 @@ Six small, finished projects: three web apps written in plain HTML, CSS and Java
 
 | | |
 |---|---|
-| [![Apron](Apron/screenshot.png)](Apron/) | **[Apron](Apron/)** — An ordering page for a restaurant. Name your restaurant, build an order from the menu, choose pickup or delivery, add a tip and your local sales tax, and get a confirmation with the full breakdown. |
-| [![Waypoint](Waypoint/screenshot.png)](Waypoint/) | **[Waypoint](Waypoint/)** — A personal finance planner. Enter your pay, taxes and monthly expenses to see what you can save per paycheck, and how long a savings goal will take. |
-| [![Swap](Swap/screenshot.png)](Swap/) | **[Swap](Swap/)** — A currency converter for 88 currencies, using real exchange rates. It keeps working offline with the last rates it downloaded and never invents a rate. |
+| [![Apron](Apron/screenshot.png)](Apron/) | **[Apron](Apron/)** · [▶ Live demo](https://gabodelgado.github.io/portfolio/Apron/) — An ordering page for a restaurant. Name your restaurant, build an order from the menu, choose pickup or delivery, add a tip and your local sales tax, and get a confirmation with the full breakdown. |
+| [![Waypoint](Waypoint/screenshot.png)](Waypoint/) | **[Waypoint](Waypoint/)** · [▶ Live demo](https://gabodelgado.github.io/portfolio/Waypoint/) — A personal finance planner. Enter your pay, taxes and monthly expenses to see what you can save per paycheck, and how long a savings goal will take. |
+| [![Swap](Swap/screenshot.png)](Swap/) | **[Swap](Swap/)** · [▶ Live demo](https://gabodelgado.github.io/portfolio/Swap/) — A currency converter for 88 currencies, using real exchange rates. It keeps working offline with the last rates it downloaded and never invents a rate. |
 
 ## Python games
 
@@ -20,7 +20,7 @@ Six small, finished projects: three web apps written in plain HTML, CSS and Java
 
 ## Running them
 
-**Web apps:** open the app's `index.html` in any modern browser. There's nothing to install or build.
+**Web apps:** try them live with the links above, or open the app's `index.html` in any modern browser. There's nothing to install or build.
 
 **Games:** you need Python 3.9 or newer.
 

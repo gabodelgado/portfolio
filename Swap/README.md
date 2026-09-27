@@ -2,6 +2,8 @@
 
 A currency converter for 88 currencies, using real mid-market exchange rates.
 
+**[▶ Try it live](https://gabodelgado.github.io/portfolio/Swap/)**
+
 ![Swap](screenshot.png)
 
 ## What it does
