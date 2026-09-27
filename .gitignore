@@ -13,3 +13,4 @@ playwright-report/
 
 # Kitchen order databases
 *.db
+.ruff_cache/
