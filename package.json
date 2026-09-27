@@ -1,0 +1,11 @@
+{
+  "name": "portfolio",
+  "private": true,
+  "description": "Browser tests for the portfolio's web apps and games",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.47.0"
+  }
+}

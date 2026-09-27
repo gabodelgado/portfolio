@@ -496,6 +496,8 @@ trap.addEventListener('blur', function(){
 document.getElementById('words').addEventListener('click', focusTrap);
 
 document.getElementById('nameInput').addEventListener('keydown', function(e){
+    // this Enter belongs to the name field; without this it would also reach the menu and start a test
+    e.stopPropagation();
     if(e.key === 'Enter' && this.value.trim()){
         playerName = this.value.trim().slice(0, 20);
         persist();

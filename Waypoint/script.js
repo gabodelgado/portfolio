@@ -592,6 +592,8 @@ function calculate(){
 
     document.getElementById('results').style.display = 'block';
     document.getElementById('placeholder').style.display = 'none';
+    // remember that the plan is on screen, so a reload shows it again
+    if(draftRestored) saveDraft();
 }
 
 const DRAFT_KEY = 'waypointDraft';

@@ -7,3 +7,8 @@ data.json
 
 # local dev server config
 .claude/
+
+# test tooling
+node_modules/
+test-results/
+playwright-report/
