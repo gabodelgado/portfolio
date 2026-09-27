@@ -432,8 +432,30 @@ function setLang(lang){
     refreshGreeting();
     const results = document.getElementById('results');
     if(results.style.display !== 'none') calculate();
+    labelFields();
     if(draftRestored) saveDraft();
 }
+
+// Screen readers need every field tied to its label; expense rows are named after their category
+function labelFields(){
+    document.querySelectorAll('.field').forEach(function(field){
+        const label = field.querySelector('label');
+        const control = field.querySelector('input, select');
+        if(label && control && control.id) label.htmlFor = control.id;
+    });
+    document.querySelectorAll('.expense-row').forEach(function(row){
+        const name = row.querySelector('input[type=text]:not(.expense-value)');
+        const value = row.querySelector('.expense-value');
+        const label = name.value.trim() || i18n[currentLang].expenseName;
+        name.setAttribute('aria-label', name.hasAttribute('readonly') ? label : i18n[currentLang].expenseName);
+        value.setAttribute('aria-label', label);
+    });
+}
+
+document.addEventListener('input', function(e){
+    // a custom expense's amount field is named after what the user types as its name
+    if(e.target.closest && e.target.closest('.expense-row') && !e.target.classList.contains('expense-value')) labelFields();
+});
 
 function addCustomExpense(){
     const container = document.getElementById('variableExpenses');
@@ -443,6 +465,7 @@ function addCustomExpense(){
         '<input type="text" inputmode="decimal" autocomplete="off" class="expense-value num-input" placeholder="' + i18n[currentLang].moneyPh + '" data-i18n-ph="moneyPh">' +
         removeBtnHtml();
     container.appendChild(row);
+    labelFields();
     row.querySelector('input').focus();
 }
 
@@ -693,6 +716,7 @@ function restoreDraft(){
         });
     }
 
+    labelFields();
     if(draft.showResults !== false) calculate();
 }
 

@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Swap</title>
+<meta name="description" content="Currency converter for 88 currencies with real mid-market rates. Works offline with the last rates downloaded.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Swap · Gabriel Delgado">
+<meta property="og:description" content="Currency converter for 88 currencies with real mid-market rates. Works offline with the last rates downloaded.">
+<meta property="og:url" content="https://gabodelgado.github.io/portfolio/Swap/">
+<meta property="og:image" content="https://gabodelgado.github.io/portfolio/assets/thumbs/swap.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💱</text></svg>">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -72,7 +79,7 @@
                 </div>
             </div>
             <div class="amount-wrap">
-                <input type="text" inputmode="decimal" autocomplete="off" class="amount-input" id="amount" placeholder="0" value="100">
+                <input type="text" inputmode="decimal" autocomplete="off" class="amount-input" id="amount" placeholder="0" value="100" data-i18n-aria="youSend" aria-label="Envías">
             </div>
         </div>
     </div>
@@ -97,7 +104,7 @@
                 </div>
             </div>
             <div class="amount-wrap">
-                <input type="text" class="amount-input" id="convertedDisplay" readonly tabindex="-1" value="—">
+                <input type="text" class="amount-input" id="convertedDisplay" readonly tabindex="-1" value="—" data-i18n-aria="theyReceive" aria-label="Reciben">
             </div>
         </div>
     </div>
@@ -117,5 +124,17 @@
 </div>
 
 <script src="script.js"></script>
+<!-- Link back to the portfolio; only shown on the portfolio site, never when the app is delivered on its own -->
+<script>
+(function(){
+    if(!/\.github\.io$/.test(location.hostname)) return;
+    var es = (document.documentElement.lang || navigator.language || 'es').toLowerCase().indexOf('es') === 0;
+    var a = document.createElement('a');
+    a.href = '../';
+    a.textContent = es ? '← Portafolio' : '← Portfolio';
+    a.setAttribute('style', 'position:fixed;left:12px;bottom:12px;z-index:9999;padding:6px 12px;border-radius:999px;background:rgba(20,18,16,.82);color:#fff;font:600 12px system-ui,sans-serif;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.2);');
+    document.body.appendChild(a);
+})();
+</script>
 </body>
 </html>

@@ -14,10 +14,15 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+<!-- The two main fonts are served from this site (SIL Open Font License, see assets/fonts) so the headline paints sooner -->
+<link rel="preload" href="assets/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=DM+Sans:wght@400;500;700&family=Newsreader:opsz,wght@6..72,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,600&display=swap" rel="stylesheet">
 <style>
+    @font-face { font-family: 'Fraunces'; font-style: normal; font-weight: 100 900; font-display: swap; src: url(assets/fonts/fraunces-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+    @font-face { font-family: 'DM Sans'; font-style: normal; font-weight: 100 1000; font-display: swap; src: url(assets/fonts/dm-sans-latin.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
     :root {
         --bg: #f6f2ea; --ink: #1e1b18; --soft: #6b6359; --line: #e3dccf; --card: #fffdf8; --accent: #c2410c;
     }
@@ -68,15 +73,15 @@
     h3 { font-size: 22px; font-weight: 700; letter-spacing: -.3px; }
     .desc { color: var(--c-soft); font-size: 14.5px; margin-top: 8px; flex: 1; }
     .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
-    .tag { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; border: 1px solid currentColor; opacity: .75; }
+    .tag { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; border: 1px solid currentColor; }
     .links { display: flex; gap: 10px; margin-top: 18px; }
     .links a { flex: 1; text-align: center; padding: 10px; border-radius: 10px; font-weight: 700; font-size: 14px; text-decoration: none; }
     .links .demo { background: var(--c-accent); color: var(--c-btn-ink); }
-    .links .code { border: 1.5px solid currentColor; opacity: .85; }
+    .links .code { border: 1.5px solid currentColor; }
     .links a:hover { filter: brightness(1.08); }
 
     /* Each card borrows its app's own palette */
-    .apron    { --c-bg: #fffaf0; --c-ink: #8c2f2f; --c-soft: #8a7256; --c-accent: #a83232; }
+    .apron    { --c-bg: #fffaf0; --c-ink: #8c2f2f; --c-soft: #76603f; --c-accent: #a83232; }
     .apron h3 { font-family: 'Playfair Display', 'Fraunces', Georgia, serif; }
     .waypoint { --c-bg: #14213d; --c-ink: #f4efe2; --c-soft: #b4b4bd; --c-accent: #c9a227; --c-btn-ink: #14213d; }
     .swap     { --c-bg: #0e1f30; --c-ink: #f4d58d; --c-soft: #9db3c4; --c-accent: #d4af37; --c-btn-ink: #0e1f30; }
@@ -84,8 +89,8 @@
     .volley h3 { font-family: Menlo, Consolas, monospace; letter-spacing: 1px; }
     .keystroke { --c-bg: #fbf6ea; --c-ink: #2b2622; --c-soft: #7a6e5c; --c-accent: #b3362b; }
     .keystroke h3 { font-family: 'American Typewriter', 'Courier New', monospace; }
-    .nine     { --c-bg: #e9efe9; --c-ink: #2e3d38; --c-soft: #6e8079; --c-accent: #2f7d6d; }
-    .tenor    { --c-bg: #fffdf8; --c-ink: #0f2e27; --c-soft: #6b7a74; --c-accent: #0f3b31; }
+    .nine     { --c-bg: #e9efe9; --c-ink: #2e3d38; --c-soft: #57675f; --c-accent: #2f7d6d; }
+    .tenor    { --c-bg: #fffdf8; --c-ink: #0f2e27; --c-soft: #5d6b65; --c-accent: #0f3b31; }
     .tenor h3 { font-family: 'Newsreader', 'Fraunces', Georgia, serif; }
     .kitchen  { --c-bg: #1d1a18; --c-ink: #efe6d6; --c-soft: #b3a795; --c-accent: #a83232; }
 
@@ -150,7 +155,7 @@
             <div><b>8</b><span data-t="fact_projects">proyectos terminados</span></div>
             <div><b>2</b><span data-t="fact_langs">idiomas en cada app</span></div>
             <div><b>0</b><span data-t="fact_install">cosas que instalar para probarlos</span></div>
-            <div><b>31</b><span data-t="fact_tests">pruebas automáticas en cada cambio</span></div>
+            <div><b>42</b><span data-t="fact_tests">pruebas automáticas en cada cambio</span></div>
         </div>
     </section>
 
@@ -261,7 +266,7 @@
         <ul class="principles">
             <li><b data-t="p1_title">Datos reales, nunca inventados</b><span data-t="p1">Tasas de cambio en vivo; impuestos que ingresa el usuario en lugar de aproximaciones.</span></li>
             <li><b data-t="p2_title">Español e inglés</b><span data-t="p2">Textos, números y fechas con el formato que espera cada idioma.</span></li>
-            <li><b data-t="p3_title">Terminado de verdad</b><span data-t="p3">Probado en navegador real y en teléfono; 31 pruebas automáticas corren en cada cambio.</span></li>
+            <li><b data-t="p3_title">Terminado de verdad</b><span data-t="p3">Probado en navegador real y en teléfono; 42 pruebas automáticas corren en cada cambio.</span></li>
         </ul>
     </section>
 
@@ -303,7 +308,7 @@ const TEXT = {
         about_2: 'Me importan los detalles que no se ven hasta que faltan: que 1000 se escriba 1.000, que el idioma se recuerde, que funcione en el teléfono y que un dato nunca sea inventado.',
         p1_title: 'Datos reales, nunca inventados', p1: 'Tasas de cambio en vivo; impuestos que ingresa el usuario en lugar de aproximaciones.',
         p2_title: 'Español e inglés', p2: 'Textos, números y fechas con el formato que espera cada idioma.',
-        p3_title: 'Terminado de verdad', p3: 'Probado en navegador real y en teléfono; 31 pruebas automáticas corren en cada cambio.',
+        p3_title: 'Terminado de verdad', p3: 'Probado en navegador real y en teléfono; 42 pruebas automáticas corren en cada cambio.',
         contact_title: '¿Tienes un proyecto en mente?', contact_sub: 'Escríbeme y lo conversamos.',
         doc_title: 'Gabriel Delgado — Portafolio'
     },
@@ -331,7 +336,7 @@ const TEXT = {
         about_2: "I care about the details you only notice when they're missing: 1000 written as 1,000, the language remembered, working on phones, and never a made-up number.",
         p1_title: 'Real data, never invented', p1: 'Live exchange rates; taxes entered by the user instead of guesses.',
         p2_title: 'Spanish and English', p2: 'Text, numbers and dates formatted the way each language expects.',
-        p3_title: 'Actually finished', p3: 'Tested in a real browser and on phones; 31 automated tests run on every change.',
+        p3_title: 'Actually finished', p3: 'Tested in a real browser and on phones; 42 automated tests run on every change.',
         contact_title: 'Have a project in mind?', contact_sub: "Write to me and let's talk.",
         doc_title: 'Gabriel Delgado — Portfolio'
     }

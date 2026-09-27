@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Keystroke</title>
 <meta name="description" content="A typing speed test with a typewriter soul. Browser version of the Python app.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Keystroke · Gabriel Delgado">
+<meta property="og:description" content="A typing speed test with a typewriter soul. Browser version of the Python app.">
+<meta property="og:url" content="https://gabodelgado.github.io/portfolio/Keystroke/web/">
+<meta property="og:image" content="https://gabodelgado.github.io/portfolio/assets/thumbs/keystroke.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⌨️</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +24,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { background: var(--paper); }
     body { font-family: var(--type); color: var(--ink); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
-    .back { position: fixed; left: 14px; top: 10px; font-size: 12px; color: var(--soft); text-decoration: none; }
+    .back { position: fixed; left: 14px; top: 10px; font-size: 12px; color: #6b604f; text-decoration: none; }
     .back:hover { color: var(--red); }
 
     .sheet {
@@ -121,8 +127,8 @@
         <div class="logo">Keystroke</div>
         <div class="tagline" data-t="tagline"></div>
         <h2 data-t="welcome"></h2>
-        <p class="ask" data-t="ask_name"></p>
-        <input class="name-input" id="nameInput" maxlength="20" autocomplete="given-name" spellcheck="false">
+        <p class="ask" id="askName" data-t="ask_name"></p>
+        <input class="name-input" id="nameInput" aria-labelledby="askName" maxlength="20" autocomplete="given-name" spellcheck="false">
         <p class="hint" data-t="name_hint"></p>
     </section>
 

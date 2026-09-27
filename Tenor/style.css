@@ -3,7 +3,7 @@
     --card: #fffdf8;
     --ink: #0f2e27;
     --ink-2: #3c524b;
-    --muted: #6b7a74;
+    --muted: #5d6b65;
     --line: #e6e1d3;
     --grid: #ece7da;
     --green: #0b8a74;       /* principal · the plan with extra payments (validated with dataviz checks) */
@@ -23,7 +23,7 @@ button { font-family: inherit; }
 /* ---------- welcome ---------- */
 .welcome { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 20px; background: radial-gradient(circle at 20% 0%, #134a3d 0%, var(--deep) 55%, #0a2922 100%); overflow-y: auto; }
 .welcome-card { position: relative; width: 100%; max-width: 560px; background: var(--card); border-radius: 22px; padding: 44px 40px 36px; box-shadow: 0 30px 70px rgba(0,0,0,.35); }
-.brand-mark { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--green); letter-spacing: .5px; }
+.brand-mark { font-family: var(--serif); font-size: 18px; font-weight: 600; color: #07705e; letter-spacing: .5px; }
 .welcome-card h1 { font-family: var(--serif); font-weight: 600; font-size: 36px; line-height: 1.1; margin-top: 10px; letter-spacing: -.5px; }
 .welcome-card p { color: var(--muted); margin-top: 10px; font-size: 15.5px; }
 .goals { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 26px; }
@@ -59,9 +59,9 @@ input, select { font: 600 16px var(--sans); color: var(--ink); }
 .field > input:focus, .term-row input:focus, #start:focus { border-color: var(--green); }
 .money-field { display: flex; align-items: center; border: 2px solid var(--line); border-radius: 12px; background: #fff; transition: border-color .15s; }
 .money-field:focus-within { border-color: var(--green); }
-.money-field select { border: none; background: transparent; padding: 12px 2px 12px 12px; font-weight: 800; color: var(--green); outline: none; cursor: pointer; width: auto; }
+.money-field select { border: none; background: transparent; padding: 12px 2px 12px 12px; font-weight: 800; color: #07705e; outline: none; cursor: pointer; width: auto; }
 .money-field input { flex: 1; min-width: 0; border: none; background: transparent; padding: 12px 14px 12px 6px; outline: none; }
-.ccy-tag { padding-left: 14px; font-weight: 800; color: var(--green); }
+.ccy-tag { padding-left: 14px; font-weight: 800; color: #07705e; }
 .note { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
 .term-row { display: flex; gap: 8px; }
 .term-row input { flex: 1; min-width: 0; }
@@ -86,7 +86,7 @@ input, select { font: 600 16px var(--sans); color: var(--ink); }
 
 .savings { display: flex; gap: 12px; align-items: center; background: #eef7f3; border: 1px solid #cfe7de; border-radius: 16px; padding: 14px 18px; margin-bottom: 14px; font-size: 15px; color: var(--ink); }
 .savings .icon { font-size: 22px; }
-.savings b { color: var(--green); }
+.savings b { color: #07705e; }
 
 .chart-card { margin-bottom: 14px; }
 .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }

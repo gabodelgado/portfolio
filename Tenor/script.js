@@ -30,6 +30,8 @@ const TEXT = {
         balanceTitle: 'Saldo pendiente', splitTitle: 'A dónde va tu dinero cada año',
         principal: 'Capital', interest: 'Intereses', balance: 'Saldo',
         planBase: 'Sin pago extra', planExtra: 'Con pago extra',
+        balanceAria: 'Gráfico del saldo pendiente: baja de {amount} a 0 en {date}. Los valores están en la tabla de amortización.',
+        splitAria: 'Gráfico de {n} años: los intereses bajan de {first} el primer año a {last} el último, y el capital sube. Los valores están en la tabla de amortización.',
         scheduleTitle: 'Tabla de amortización', byYear: 'Por año', byMonth: 'Por mes', csv: 'Descargar CSV',
         colPeriod: 'Periodo', colYear: 'Año', colMonth: 'Mes', colPayment: 'Pago', colPrincipal: 'Capital', colInterest: 'Intereses', colBalance: 'Saldo',
         yearN: 'Año {n}',
@@ -57,6 +59,8 @@ const TEXT = {
         balanceTitle: 'Remaining balance', splitTitle: 'Where your money goes each year',
         principal: 'Principal', interest: 'Interest', balance: 'Balance',
         planBase: 'No extra payment', planExtra: 'With extra payment',
+        balanceAria: 'Remaining balance chart: it goes from {amount} to 0 by {date}. The values are in the amortization schedule.',
+        splitAria: 'Chart of {n} years: interest falls from {first} in the first year to {last} in the last, while principal grows. The values are in the amortization schedule.',
         scheduleTitle: 'Amortization schedule', byYear: 'By year', byMonth: 'By month', csv: 'Download CSV',
         colPeriod: 'Period', colYear: 'Year', colMonth: 'Month', colPayment: 'Payment', colPrincipal: 'Principal', colInterest: 'Interest', colBalance: 'Balance',
         yearN: 'Year {n}',
@@ -329,11 +333,12 @@ function niceMax(v){
 }
 const css = function(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); };
 
-function frame(container){
+// label: what a screen reader announces for the chart (the numbers are also in the table below)
+function frame(container, label){
     container.innerHTML = '';
     const w = container.clientWidth, h = container.clientHeight;
     const pad = { l: 46, r: 16, t: 10, b: 26 };
-    const svg = el('svg', { viewBox: '0 0 ' + w + ' ' + h, role: 'img' }, container);
+    const svg = el('svg', { viewBox: '0 0 ' + w + ' ' + h, role: 'img', 'aria-label': label }, container);
     return { svg: svg, w: w, h: h, pad: pad, iw: w - pad.l - pad.r, ih: h - pad.t - pad.b };
 }
 
@@ -350,7 +355,7 @@ function yAxis(f, max){
 function drawBalance(){
     const c = current;
     const container = document.getElementById('balanceChart');
-    const f = frame(container);
+    const f = frame(container, t('balanceAria', { amount: money(c.inp.amount), date: fmtMonth(addMonths(c.start, c.plan.length - 1)) }));
     const n = c.base.length;
     const max = niceMax(c.inp.amount);
     const x = function(k){ return f.pad.l + f.iw * k / n; };
@@ -422,8 +427,8 @@ function yearly(rows){
 function drawSplit(){
     const c = current;
     const container = document.getElementById('splitChart');
-    const f = frame(container);
     const years = yearly(c.plan);
+    const f = frame(container, t('splitAria', { n: years.length, first: money(years[0].interest), last: money(years[years.length - 1].interest) }));
     const max = niceMax(Math.max.apply(null, years.map(function(y){ return y.payment; })));
     yAxis(f, max);
     const band = f.iw / years.length;

@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nine</title>
 <meta name="description" content="Play sudoku, or type in any puzzle and watch it get solved. Browser version of the Python app.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Nine · Gabriel Delgado">
+<meta property="og:description" content="Play sudoku, or type in any puzzle and watch it get solved. Browser version of the Python app.">
+<meta property="og:url" content="https://gabodelgado.github.io/portfolio/Nine/web/">
+<meta property="og:image" content="https://gabodelgado.github.io/portfolio/assets/thumbs/nine.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔢</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +18,7 @@
 <style>
     :root {
         --bg: #e9efe9; --paper: #fbfdfb; --thin: #c5d1c8; --thick: #2e3d38; --given: #1f2a27; --user: #2f7d6d;
-        --solver: #4a78b0; --coral: #d65e50; --coral-bg: #fbe3df; --selected: #c9e4d9; --peer: #eef5f0; --same: #d9ece4; --muted: #6e8079;
+        --solver: #4a78b0; --coral: #d65e50; --coral-bg: #fbe3df; --selected: #c9e4d9; --peer: #eef5f0; --same: #d9ece4; --muted: #57675f;
         --ui: 'Avenir Next', 'Nunito Sans', 'Helvetica Neue', Arial, sans-serif;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -44,8 +50,8 @@
     .side { padding-top: 4px; }
     .top-row { display: flex; justify-content: space-between; align-items: baseline; }
     h1 { font-family: Futura, 'Jost', var(--ui); font-size: 46px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
-    .lang button { background: none; border: none; font: 700 16px var(--ui); color: var(--thin); cursor: pointer; margin-left: 8px; }
-    .lang button.active { color: var(--user); }
+    .lang button { background: none; border: none; font: 700 16px var(--ui); color: var(--muted); cursor: pointer; margin-left: 8px; }
+    .lang button.active { color: #236a5b; text-decoration: underline; text-underline-offset: 4px; }
     .tagline { color: var(--muted); font-size: 15px; margin-top: 8px; }
     .section-label { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; margin: 26px 0 8px; }
     .row { display: grid; gap: 8px; }

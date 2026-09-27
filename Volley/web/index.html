@@ -2,9 +2,15 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Volley</title>
 <meta name="description" content="Neon arcade Pong — play against the CPU or a friend. Browser version of the Python game.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Volley · Gabriel Delgado">
+<meta property="og:description" content="Neon arcade Pong — play against the CPU or a friend. Browser version of the Python game.">
+<meta property="og:url" content="https://gabodelgado.github.io/portfolio/Volley/web/">
+<meta property="og:image" content="https://gabodelgado.github.io/portfolio/assets/thumbs/volley.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏓</text></svg>">
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -12,7 +18,7 @@
     body { display: flex; align-items: center; justify-content: center; touch-action: none; -webkit-user-select: none; user-select: none; }
     canvas { display: block; max-width: 100vw; max-height: 100vh; aspect-ratio: 960 / 600; width: 100%; height: auto; image-rendering: auto; }
     @media (min-aspect-ratio: 960/600) { canvas { width: auto; height: 100%; } }
-    .back { position: fixed; left: 12px; top: 10px; font: 12px Menlo, Consolas, monospace; color: #786ea0; text-decoration: none; opacity: .75; }
+    .back { position: fixed; left: 12px; top: 10px; font: 12px Menlo, Consolas, monospace; color: #8f86b8; text-decoration: none; }
     .back:hover { color: #ff2e97; opacity: 1; }
     .rotate { display: none; position: fixed; left: 0; right: 0; bottom: 18%; text-align: center; font: bold 15px Menlo, Consolas, monospace; color: #00e5ff; letter-spacing: .5px; pointer-events: none; }
     .rotate span { display: inline-block; font-size: 30px; margin-bottom: 8px; animation: tilt 1.8s ease-in-out infinite; }
