@@ -1,8 +1,8 @@
 # Gabriel Delgado — Portfolio
 
-**[▶ Visit the portfolio site](https://gabodelgado.github.io/portfolio/)**
+**[▶ Visit the portfolio site](https://gabodelgado.github.io/portfolio/)** · [![Tests](https://github.com/gabodelgado/portfolio/actions/workflows/tests.yml/badge.svg)](https://github.com/gabodelgado/portfolio/actions/workflows/tests.yml)
 
-Six small, finished projects: three web apps written in plain HTML, CSS and JavaScript, and three desktop games in Python. Each one has its own look and personality, runs in Spanish and English, and formats numbers the way each language expects (`1.234,56` / `1,234.56`).
+Eight small, finished projects: four web apps written in plain HTML, CSS and JavaScript, a Python backend, and three games in Python. Each one has its own look and personality, runs in Spanish and English, and formats numbers the way each language expects (`1.234,56` / `1,234.56`).
 
 ## Web apps
 
@@ -11,6 +11,13 @@ Six small, finished projects: three web apps written in plain HTML, CSS and Java
 | [![Apron](Apron/screenshot.png)](Apron/) | **[Apron](Apron/)** · [▶ Live demo](https://gabodelgado.github.io/portfolio/Apron/) — An ordering page for a restaurant. Name your restaurant, build an order from the menu, choose pickup or delivery, add a tip and your local sales tax, and get a confirmation with the full breakdown. |
 | [![Waypoint](Waypoint/screenshot.png)](Waypoint/) | **[Waypoint](Waypoint/)** · [▶ Live demo](https://gabodelgado.github.io/portfolio/Waypoint/) — A personal finance planner. Enter your pay, taxes and monthly expenses to see what you can save per paycheck, and how long a savings goal will take. |
 | [![Swap](Swap/screenshot.png)](Swap/) | **[Swap](Swap/)** · [▶ Live demo](https://gabodelgado.github.io/portfolio/Swap/) — A currency converter for 88 currencies, using real exchange rates. It keeps working offline with the last rates it downloaded and never invents a rate. |
+| [![Tenor](Tenor/screenshot.png)](Tenor/) | **[Tenor](Tenor/)** · [▶ Live demo](https://gabodelgado.github.io/portfolio/Tenor/) — A loan simulator: monthly payment, total interest, the amortization schedule, and how much an extra monthly payment saves you. Interactive charts and CSV export. |
+
+## Backend
+
+| | |
+|---|---|
+| [![Kitchen](Kitchen/screenshot.png)](Kitchen/) | **[Kitchen](Kitchen/)** — Apron's backend, in Python with FastAPI and SQLite. It receives orders, re-prices them on the server so they can't be tampered with, and shows them on a live, password-protected kitchen board. |
 
 ## Python games
 
@@ -34,3 +41,12 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python Volley/main.py      # or Keystroke/main.py, Nine/main.py
 ```
+
+**Kitchen:** see [its README](Kitchen/README.md) to run it locally or deploy it.
+
+## Tests
+
+Every push runs the test suite on GitHub Actions:
+
+- **Python:** the sudoku engine and the Kitchen API (`python -m pytest tests`).
+- **Browser:** Playwright drives every web app and web game like a visitor would, plus a full-stack test that places an order in Apron and follows it on the kitchen board (`npm install && npx playwright test`).

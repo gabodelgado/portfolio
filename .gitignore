@@ -12,3 +12,6 @@ data.json
 node_modules/
 test-results/
 playwright-report/
+
+# Kitchen order databases
+*.db

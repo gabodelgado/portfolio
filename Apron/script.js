@@ -179,7 +179,9 @@ const i18n = {
         nameRequired:'Ingresa tu nombre', phoneRequired:'Ingresa tu teléfono', phoneInvalid:'El teléfono debe tener al menos 7 dígitos', removeItem:'Quitar', addressRequired:'Ingresa tu dirección de entrega',
         orderConfirmedTitle:'¡Pedido confirmado!', orderNumberLabel:'N.º de pedido',
         modalSummaryTitle:'Resumen', modalContactTitle:'Contacto', phoneShort:'Teléfono', closeLabel:'Cerrar', newOrderBtn:'🍽️ Hacer otro pedido',
-        etaPickup:'Listo para recoger en 15–20 min', etaDelivery:'Llega en 35–45 min'
+        etaPickup:'Listo para recoger en 15–20 min', etaDelivery:'Llega en 35–45 min',
+        sending:'Enviando a la cocina…', sendError:'No pudimos enviar tu pedido a la cocina. Revisa tu conexión e inténtalo de nuevo.',
+        sentToKitchen:'✓ Recibido en la cocina'
     },
     en: {
         appTitle:'🍽️ Apron',
@@ -202,9 +204,16 @@ const i18n = {
         nameRequired:'Enter your name', phoneRequired:'Enter your phone number', phoneInvalid:'Phone number needs at least 7 digits', removeItem:'Remove', addressRequired:'Enter your delivery address',
         orderConfirmedTitle:'Order confirmed!', orderNumberLabel:'Order #',
         modalSummaryTitle:'Summary', modalContactTitle:'Contact', phoneShort:'Phone', closeLabel:'Close', newOrderBtn:'🍽️ Place another order',
-        etaPickup:'Ready for pickup in 15–20 min', etaDelivery:'Arrives in 35–45 min'
+        etaPickup:'Ready for pickup in 15–20 min', etaDelivery:'Arrives in 35–45 min',
+        sending:'Sending to the kitchen…', sendError:"We couldn't send your order to the kitchen. Check your connection and try again.",
+        sentToKitchen:'✓ Received by the kitchen'
     }
 };
+
+// Optional backend: with a Kitchen server URL, orders go to the restaurant's live kitchen board
+// (see /Kitchen). Without one — like the public demo — Apron works on its own and simulates the confirmation.
+// Set it here, or try it with ?kitchen=http://localhost:8000
+const KITCHEN_URL = (new URLSearchParams(location.search).get('kitchen') || '').replace(/\/+$/, '');
 
 let currentLang = 'es';
 let menu = menuData.es;
@@ -379,6 +388,7 @@ function clearFieldErrors(){
     ['custName','custPhone','custAddress'].forEach(function(id){ document.getElementById(id).classList.remove('error'); });
     ['nameError','phoneError','addressError','cartError'].forEach(function(id){ document.getElementById(id).classList.remove('show'); });
     document.getElementById('phoneError').textContent = i18n[currentLang].phoneRequired;
+    document.getElementById('cartError').textContent = i18n[currentLang].cartEmptyError; // it may still hold a send error
 }
 
 const DRAFT_KEY = 'apronOrderDraft';
@@ -497,12 +507,48 @@ function placeOrder(){
     }
 
     if(!valid){ focusFirstError(); return; }
-    showOrderConfirmation(name, phone, address);
+    if(KITCHEN_URL) sendToKitchen(name, phone, address);
+    else showOrderConfirmation(name, phone, address);
 }
 
-function showOrderConfirmation(name, phone, address){
-    document.getElementById('orderNumber').textContent = generateOrderNumber();
-    document.getElementById('etaText').textContent = orderType === 'delivery' ? i18n[currentLang].etaDelivery : i18n[currentLang].etaPickup;
+// The server recomputes every price and total from its own menu; only ids and quantities are sent
+async function sendToKitchen(name, phone, address){
+    const btn = document.getElementById('confirmBtn');
+    const err = document.getElementById('cartError');
+    const t = i18n[currentLang];
+    btn.disabled = true;
+    btn.textContent = t.sending;
+    err.classList.remove('show');
+    calcTotal();
+    const customTip = parseNum(document.getElementById('customTip').value) || 0;
+    const body = {
+        type: orderType,
+        customer: { name: name, phone: phone, address: orderType === 'delivery' ? address : null },
+        items: Object.values(cart).map(function(i){ return { id: i.id, qty: i.qty }; }),
+        tax_rate_pct: lastBill.taxRatePct,
+        tip: tipPct > 0 ? { pct: Math.round(tipPct * 100) } : { amount_cents: Math.round(customTip * 100) },
+        note: document.getElementById('orderNote').value.trim() || null
+    };
+    try {
+        const res = await fetch(KITCHEN_URL + '/api/orders', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        const saved = await res.json();
+        showOrderConfirmation(name, phone, address, saved);
+    } catch(e){
+        err.textContent = t.sendError;
+        err.classList.add('show');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = t.confirmBtn;
+    }
+}
+
+function showOrderConfirmation(name, phone, address, saved){
+    document.getElementById('orderNumber').textContent = saved ? saved.number : generateOrderNumber();
+    document.getElementById('etaText').textContent = (orderType === 'delivery' ? i18n[currentLang].etaDelivery : i18n[currentLang].etaPickup) +
+        (saved ? ' · ' + i18n[currentLang].sentToKitchen : '');
 
     calcTotal();
     const t = i18n[currentLang];
@@ -518,7 +564,8 @@ function showOrderConfirmation(name, phone, address){
     if(lastBill.tip > 0) html += row(t.tip, money(lastBill.tip), 'modal-sub');
     document.getElementById('modalItems').innerHTML = html;
 
-    document.getElementById('modalTotal').textContent = money(lastBill.total);
+    // with a kitchen server, the total shown is the one the restaurant will charge
+    document.getElementById('modalTotal').textContent = money(saved ? saved.total_cents / 100 : lastBill.total);
     document.getElementById('modalName').textContent = name;
     document.getElementById('modalPhone').textContent = phone;
 

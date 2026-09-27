@@ -7,23 +7,30 @@ on:
 
 jobs:
   python:
-    name: Python (sudoku engine + games compile)
+    name: Python (sudoku engine, Kitchen API, games compile)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
+      - run: pip install -r Kitchen/requirements.txt httpx pytest
       - name: Unit tests
-        run: python -m unittest discover tests -v
+        run: python -m pytest tests -v
       - name: Games compile
         run: python -m py_compile Volley/main.py Keystroke/main.py Nine/main.py Nine/sudoku.py
 
   browser:
-    name: Browser (web apps + web games)
+    name: Browser (web apps, web games, full stack)
     runs-on: ubuntu-latest
+    env:
+      PYTHON: python   # Playwright starts Kitchen with this for the full-stack test
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r Kitchen/requirements.txt
       - uses: actions/setup-node@v4
         with:
           node-version: 20

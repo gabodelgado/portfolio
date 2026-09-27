@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitchen · Apron</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👩‍🍳</text></svg>">
+<style>
+    :root {
+        --bg: #1d1a18; --rail: #2b2724; --paper: #fdf8ec; --ink: #2e2018; --muted: #8a7256; --line: #e3cfa3;
+        --brick: #a83232; --olive: #3d5c3d; --gold: #c9a227; --text: #efe6d6; --text-muted: #a69a88;
+        --mono: 'SF Mono', Menlo, Consolas, monospace; --sans: 'Segoe UI', system-ui, sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { background: var(--bg); }
+    body { font-family: var(--sans); color: var(--text); min-height: 100vh; }
+    button { font-family: inherit; cursor: pointer; }
+    .hidden { display: none !important; }
+
+    .login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .login-card { width: 100%; max-width: 380px; background: var(--paper); color: var(--ink); border-radius: 6px; padding: 34px 30px; border-top: 6px solid var(--brick); box-shadow: 0 30px 60px rgba(0,0,0,.4); text-align: center; }
+    .login-card h1 { font-size: 26px; margin-top: 8px; }
+    .login-card p { color: var(--muted); font-size: 14px; margin: 8px 0 20px; }
+    .login-card input { width: 100%; padding: 12px; border: 2px solid var(--line); border-radius: 8px; font: 16px var(--mono); text-align: center; outline: none; }
+    .login-card input:focus { border-color: var(--brick); }
+    .login-card button { width: 100%; margin-top: 12px; padding: 12px; border: none; border-radius: 8px; background: var(--brick); color: #fff; font-weight: 700; font-size: 15px; }
+    .error { color: var(--brick); font-size: 13px; margin-top: 10px; min-height: 18px; }
+
+    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 26px; border-bottom: 1px solid #332e2a; flex-wrap: wrap; }
+    .title { display: flex; align-items: baseline; gap: 12px; }
+    .title h1 { font-size: 22px; }
+    .live { font-size: 12.5px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; animation: pulse 1.6s infinite; }
+    .live.off .dot { background: var(--brick); animation: none; }
+    @keyframes pulse { 50% { opacity: .35; } }
+    .head-right { display: flex; gap: 10px; align-items: center; }
+    .stat { font-size: 13px; color: var(--text-muted); }
+    .stat b { color: var(--text); font-size: 15px; }
+    .ghost { background: transparent; border: 1px solid #4a433d; color: var(--text); border-radius: 18px; padding: 6px 12px; font-size: 12.5px; font-weight: 700; }
+    .ghost:hover { border-color: var(--gold); }
+
+    .board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding: 22px 26px 40px; align-items: start; }
+    .column { background: var(--rail); border-radius: 12px; padding: 14px; min-height: 60vh; }
+    .col-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: 800; font-size: 14px; letter-spacing: .6px; text-transform: uppercase; }
+    .col-head .count { background: #3a3430; border-radius: 12px; padding: 2px 10px; font-size: 13px; }
+    .col-head .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; }
+    .empty-col { color: var(--text-muted); font-size: 13px; text-align: center; padding: 30px 10px; border: 1px dashed #4a433d; border-radius: 10px; }
+
+    .ticket { background: var(--paper); color: var(--ink); border-radius: 4px 4px 10px 10px; padding: 14px 14px 12px; margin-bottom: 12px; font-family: var(--mono); font-size: 13px; position: relative; box-shadow: 0 8px 18px rgba(0,0,0,.35); }
+    .ticket::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--brick); border-radius: 4px 4px 0 0; }
+    .ticket.new { animation: drop .5s ease-out; }
+    @keyframes drop { from { transform: translateY(-14px); opacity: 0; } }
+    .t-top { display: flex; justify-content: space-between; align-items: baseline; }
+    .t-num { font-size: 18px; font-weight: 800; }
+    .t-age { color: var(--muted); font-size: 12px; }
+    .t-age.late { color: var(--brick); font-weight: 700; }
+    .t-type { display: inline-block; margin-top: 6px; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: #efe3c6; }
+    .t-type.delivery { background: #f3d9d0; color: var(--brick); }
+    .t-items { list-style: none; margin: 10px 0; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); padding: 8px 0; }
+    .t-items li { display: flex; gap: 8px; padding: 2px 0; }
+    .t-items .q { font-weight: 800; min-width: 26px; }
+    .t-note { background: #fff4cf; border-left: 3px solid var(--gold); padding: 6px 8px; margin-bottom: 8px; font-size: 12.5px; white-space: pre-wrap; }
+    .t-cust { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .t-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 8px; }
+    .t-total { font-weight: 800; }
+    .t-actions { display: flex; gap: 6px; }
+    .advance { border: none; border-radius: 6px; padding: 7px 12px; font-weight: 800; font-size: 12.5px; color: #fff; background: var(--olive); }
+    .advance:hover { filter: brightness(1.1); }
+    .cancel { border: 1px solid var(--line); background: transparent; border-radius: 6px; padding: 6px 9px; font-size: 12px; color: var(--muted); }
+    .cancel:hover { color: var(--brick); border-color: var(--brick); }
+
+    .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--paper); color: var(--ink); padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 14px; box-shadow: 0 10px 26px rgba(0,0,0,.4); opacity: 0; transition: opacity .2s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+    @media (max-width: 900px) {
+        .board { grid-template-columns: 1fr; }
+        .column { min-height: 0; }
+        header { padding: 14px 16px; }
+        .board { padding: 16px; }
+    }
+</style>
+</head>
+<body>
+
+<section class="login" id="login">
+    <form class="login-card" id="loginForm">
+        <div style="font-size:38px;">👩‍🍳</div>
+        <h1 data-t="loginTitle">Tablero de cocina</h1>
+        <p data-t="loginSub">Escribe la contraseña de la cocina para ver los pedidos.</p>
+        <input type="password" id="password" autocomplete="current-password" data-t-ph="passwordPh" placeholder="Contraseña">
+        <button type="submit" data-t="enter">Entrar</button>
+        <div class="error" id="loginError"></div>
+    </form>
+</section>
+
+<section class="hidden" id="app">
+    <header>
+        <div class="title">
+            <h1 data-t="boardTitle">Cocina</h1>
+            <span class="live" id="live"><span class="dot"></span><span id="liveText"></span></span>
+        </div>
+        <div class="head-right">
+            <span class="stat"><span data-t="doneToday">Entregados hoy</span>: <b id="doneCount">0</b></span>
+            <button class="ghost" id="soundBtn" onclick="toggleSound()"></button>
+            <button class="ghost" onclick="setLang(lang === 'es' ? 'en' : 'es')" id="langBtn">EN</button>
+            <button class="ghost" onclick="logout()" data-t="logout">Salir</button>
+        </div>
+    </header>
+    <main class="board" id="board"></main>
+</section>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const API = '';  // same server
+const COLUMNS = [
+    { status: 'received', color: 'var(--gold)', next: 'preparing' },
+    { status: 'preparing', color: 'var(--brick)', next: 'ready' },
+    { status: 'ready', color: 'var(--olive)', next: 'done' }
+];
+const TEXT = {
+    es: {
+        loginTitle: 'Tablero de cocina', loginSub: 'Escribe la contraseña de la cocina para ver los pedidos.', passwordPh: 'Contraseña', enter: 'Entrar',
+        wrongPassword: 'Contraseña incorrecta.', offline: 'Sin conexión con el servidor', live: 'En vivo', boardTitle: 'Cocina',
+        received: 'Nuevos', preparing: 'Preparando', ready: 'Listos', empty: 'Sin pedidos aquí',
+        doneToday: 'Entregados hoy', logout: 'Salir', soundOn: '🔔 Sonido', soundOff: '🔕 Sonido',
+        pickup: '🏃 Recoger', delivery: '🛵 Delivery',
+        to_preparing: 'Empezar', to_ready: 'Listo', to_done: 'Entregado', cancel: 'Cancelar',
+        confirmCancel: '¿Cancelar el pedido {n}?', newOrder: 'Nuevo pedido {n}', minutes: 'hace {n} min', justNow: 'ahora'
+    },
+    en: {
+        loginTitle: 'Kitchen board', loginSub: 'Enter the kitchen password to see the orders.', passwordPh: 'Password', enter: 'Enter',
+        wrongPassword: 'Wrong password.', offline: 'Not connected to the server', live: 'Live', boardTitle: 'Kitchen',
+        received: 'New', preparing: 'Preparing', ready: 'Ready', empty: 'No orders here',
+        doneToday: 'Done today', logout: 'Log out', soundOn: '🔔 Sound', soundOff: '🔕 Sound',
+        pickup: '🏃 Pickup', delivery: '🛵 Delivery',
+        to_preparing: 'Start', to_ready: 'Ready', to_done: 'Handed over', cancel: 'Cancel',
+        confirmCancel: 'Cancel order {n}?', newOrder: 'New order {n}', minutes: '{n} min ago', justNow: 'just now'
+    }
+};
+
+let lang = localStorage.getItem('kitchenLang') === 'en' ? 'en' : 'es';
+let token = sessionStorage.getItem('kitchenToken') || '';
+let sound = localStorage.getItem('kitchenSound') !== 'off';
+let orders = [];
+let known = null;          // ids already seen, so only truly new orders ring
+let pollTimer = null;
+
+function t(key, vars){
+    let s = TEXT[lang][key];
+    if(vars) Object.keys(vars).forEach(function(k){ s = s.replace('{' + k + '}', vars[k]); });
+    return s;
+}
+function money(c){
+    const n = (c / 100).toFixed(2).split('.');
+    const group = lang === 'es' ? '.' : ',', dec = lang === 'es' ? ',' : '.';
+    return '$' + n[0].replace(/\B(?=(\d{3})+(?!\d))/g, group) + dec + n[1];
+}
+function el(tag, cls, text){
+    const node = document.createElement(tag);
+    if(cls) node.className = cls;
+    if(text !== undefined) node.textContent = text;   // user text is never parsed as HTML
+    return node;
+}
+
+async function api(path, options){
+    const res = await fetch(API + path, Object.assign({ headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } }, options || {}));
+    if(res.status === 401){ logout(); throw new Error('unauthorized'); }
+    if(!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+async function refresh(){
+    try {
+        orders = await api('/api/orders?limit=200');
+        setLive(true);
+        const ids = new Set(orders.map(function(o){ return o.id; }));
+        if(known){
+            const fresh = orders.filter(function(o){ return !known.has(o.id) && o.status === 'received'; });
+            if(fresh.length){ ding(); toast(t('newOrder', { n: fresh.map(function(o){ return o.number; }).join(', ') })); }
+            fresh.forEach(function(o){ o._new = true; });
+        }
+        known = ids;
+        render();
+    } catch(err){
+        if(err.message !== 'unauthorized') setLive(false);
+    }
+}
+
+function setLive(ok){
+    document.getElementById('live').classList.toggle('off', !ok);
+    document.getElementById('liveText').textContent = ok ? t('live') : t('offline');
+}
+
+function age(iso){
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    return mins < 1 ? t('justNow') : t('minutes', { n: mins });
+}
+
+function render(){
+    const board = document.getElementById('board');
+    board.textContent = '';
+    COLUMNS.forEach(function(col){
+        const list = orders.filter(function(o){ return o.status === col.status; }).sort(function(a, b){ return a.id - b.id; });
+        const column = el('section', 'column');
+        const head = el('div', 'col-head');
+        const name = el('span');
+        const sw = el('span', 'swatch'); sw.style.background = col.color;
+        name.appendChild(sw); name.appendChild(document.createTextNode(t(col.status)));
+        head.appendChild(name);
+        head.appendChild(el('span', 'count', String(list.length)));
+        column.appendChild(head);
+        if(!list.length) column.appendChild(el('div', 'empty-col', t('empty')));
+        list.forEach(function(o){ column.appendChild(ticket(o, col)); });
+        board.appendChild(column);
+    });
+    const today = new Date().toDateString();
+    document.getElementById('doneCount').textContent = orders.filter(function(o){
+        return o.status === 'done' && new Date(o.updated_at).toDateString() === today;
+    }).length;
+}
+
+function ticket(o, col){
+    const card = el('article', 'ticket' + (o._new ? ' new' : ''));
+    const top = el('div', 't-top');
+    top.appendChild(el('span', 't-num', o.number));
+    const mins = (Date.now() - new Date(o.created_at).getTime()) / 60000;
+    top.appendChild(el('span', 't-age' + (mins > 20 && o.status !== 'ready' ? ' late' : ''), age(o.created_at)));
+    card.appendChild(top);
+    card.appendChild(el('span', 't-type ' + o.type, t(o.type)));
+
+    const items = el('ul', 't-items');
+    o.items.forEach(function(it){
+        const li = el('li');
+        li.appendChild(el('span', 'q', it.qty + '×'));
+        li.appendChild(el('span', '', it.emoji + ' ' + it.name[lang]));
+        items.appendChild(li);
+    });
+    card.appendChild(items);
+    if(o.note) card.appendChild(el('div', 't-note', '📝 ' + o.note));
+    const cust = el('div', 't-cust');
+    cust.appendChild(el('div', '', o.customer.name + ' · ' + o.customer.phone));
+    if(o.customer.address) cust.appendChild(el('div', '', '📍 ' + o.customer.address));
+    card.appendChild(cust);
+
+    const foot = el('div', 't-foot');
+    foot.appendChild(el('span', 't-total', money(o.total_cents)));
+    const actions = el('div', 't-actions');
+    const cancel = el('button', 'cancel', t('cancel'));
+    cancel.onclick = function(){ if(confirm(t('confirmCancel', { n: o.number }))) move(o, 'cancelled'); };
+    const adv = el('button', 'advance', t('to_' + col.next));
+    adv.onclick = function(){ move(o, col.next); };
+    actions.appendChild(cancel);
+    actions.appendChild(adv);
+    foot.appendChild(actions);
+    card.appendChild(foot);
+    return card;
+}
+
+async function move(o, status){
+    try {
+        const updated = await api('/api/orders/' + o.id, { method: 'PATCH', body: JSON.stringify({ status: status }) });
+        orders = orders.map(function(x){ return x.id === updated.id ? updated : x; });
+        render();
+    } catch(err){ refresh(); }
+}
+
+let audio = null;
+function ding(){
+    if(!sound) return;
+    try {
+        audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+        [880, 1320].forEach(function(f, i){
+            const o = audio.createOscillator(), g = audio.createGain();
+            o.frequency.value = f; o.type = 'sine';
+            g.gain.setValueAtTime(0.25, audio.currentTime + i * 0.15);
+            g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + i * 0.15 + 0.4);
+            o.connect(g).connect(audio.destination);
+            o.start(audio.currentTime + i * 0.15); o.stop(audio.currentTime + i * 0.15 + 0.4);
+        });
+    } catch(err){ /* no audio */ }
+}
+function toggleSound(){ sound = !sound; localStorage.setItem('kitchenSound', sound ? 'on' : 'off'); applyLang(); if(sound) ding(); }
+
+let toastTimer = null;
+function toast(msg){
+    const node = document.getElementById('toast');
+    node.textContent = msg; node.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ node.classList.remove('show'); }, 3500);
+}
+
+function applyLang(){
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-t]').forEach(function(n){ n.textContent = t(n.getAttribute('data-t')); });
+    document.querySelectorAll('[data-t-ph]').forEach(function(n){ n.placeholder = t(n.getAttribute('data-t-ph')); });
+    document.getElementById('langBtn').textContent = lang === 'es' ? 'EN' : 'ES';
+    document.getElementById('soundBtn').textContent = sound ? t('soundOn') : t('soundOff');
+}
+function setLang(l){ lang = l; localStorage.setItem('kitchenLang', l); applyLang(); render(); setLive(!document.getElementById('live').classList.contains('off')); }
+
+function start(){
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    refresh();
+    clearInterval(pollTimer);
+    pollTimer = setInterval(refresh, 5000);
+}
+function logout(){
+    token = ''; sessionStorage.removeItem('kitchenToken'); clearInterval(pollTimer); known = null;
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('login').classList.remove('hidden');
+}
+
+document.getElementById('loginForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    token = document.getElementById('password').value;
+    const res = await fetch(API + '/api/orders?limit=1', { headers: { 'Authorization': 'Bearer ' + token } }).catch(function(){ return null; });
+    if(res && res.ok){
+        sessionStorage.setItem('kitchenToken', token);
+        document.getElementById('loginError').textContent = '';
+        start();
+    } else {
+        document.getElementById('loginError').textContent = res ? t('wrongPassword') : t('offline');
+    }
+});
+
+applyLang();
+if(token) start();
+</script>
+</body>
+</html>
