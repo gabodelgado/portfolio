@@ -28,6 +28,7 @@
             <div class="ccy-trigger" role="button" tabindex="0" onclick="toggleDropdown('home')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDropdown('home');}" style="width:100%;">
                 <span class="ccy-trigger-flag" id="homeTriggerFlag">🇺🇸</span>
                 <span class="ccy-trigger-text" id="homeTriggerText">USD</span>
+                <span class="ccy-trigger-name" id="homeTriggerName">Dólar EE.UU.</span>
                 <span class="ccy-trigger-chevron">▼</span>
             </div>
             <div class="ccy-panel" id="homePanel" style="width:100%;">
@@ -49,9 +50,9 @@
     <div class="header">
         <div class="icon">💱</div>
         <h1 data-i18n="title">SWAP</h1>
-        <p data-i18n="subtitle">Tasas de mercado en tiempo real, sin comisión</p>
+        <p data-i18n="subtitle">Tasas reales del mercado, sin comisión</p>
         <div class="live-badge-row">
-            <div class="live-badge" id="liveBadge"><span class="live-dot"></span><span id="liveText">TASA EN VIVO</span></div>
+            <div class="live-badge" id="liveBadge"><span class="live-dot"></span><span id="liveText">TASAS AL DÍA</span></div>
             <button class="refresh-btn" id="refreshBtn" onclick="fetchLiveRates()" data-i18n-aria="refresh" aria-label="Actualizar tasas" title="Actualizar tasas">⟳</button>
         </div>
     </div>
@@ -111,6 +112,7 @@
     </div>
 
     <div class="timestamp" id="timestamp"></div>
+    <div class="attribution"><span data-i18n="ratesBy">Tasas de</span> <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a></div>
     <button class="home-link" onclick="changeHomeCurrency()" data-i18n="changeHome">Cambiar moneda local</button>
 </div>
 

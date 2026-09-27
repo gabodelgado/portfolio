@@ -24,6 +24,7 @@ FPS = 60
 DURATIONS = [15, 30, 60]
 TEXT_WIDTH = 690
 VISIBLE_LINES = 3
+LIVE_STATS_AFTER = 2  # seconds before the live speed is shown
 
 # Paper, ink and a typewriter ribbon red
 PAPER = (243, 234, 215)
@@ -252,8 +253,13 @@ class App:
         self.save = load_save()
         self.lang = self.save.get("lang") if self.save.get("lang") in TEXT else "es"
         self.duration = self.save.get("duration") if self.save.get("duration") in DURATIONS else 30
-        self.name = self.save.get("name", "")
-        self.records = self.save.get("records", [])
+        name = self.save.get("name", "")
+        self.name = name[:20] if isinstance(name, str) else ""
+        records = self.save.get("records", [])
+        self.records = [
+            r for r in records if isinstance(r, dict)
+            and isinstance(r.get("wpm"), (int, float)) and isinstance(r.get("accuracy"), (int, float))
+        ] if isinstance(records, list) else []
         self.name_input = ""
         self.state = "menu" if self.name else "welcome"
         self.test = None
@@ -289,7 +295,7 @@ class App:
     def fmt_date(self, iso):
         try:
             d = datetime.fromisoformat(iso)
-        except ValueError:
+        except (TypeError, ValueError):
             return ""
         month = self.t("months")[d.month - 1]
         return f"{d.day} {month} {d.year}" if self.lang == "es" else f"{month} {d.day}, {d.year}"
@@ -385,7 +391,7 @@ class App:
         left = test.time_left() if test.started_at else test.duration
         self.draw_text(f"{int(left + 0.999)}", "big", RED if left <= 5 and test.started_at else INK, (card.left + 110, card.top + 60), "midleft")
         self.draw_text(self.t("time_left"), "small", SOFT, (card.left + 110, card.top + 88), "midleft")
-        if test.started_at:
+        if test.started_at and test.elapsed() >= LIVE_STATS_AFTER:
             self.draw_text(f"{fmt_num(test.wpm(), self.lang)} {self.t('wpm')}", "mid", INK, (card.right - 60, card.top + 62), "midright")
             self.draw_text(f"{fmt_num(test.accuracy(), self.lang)} % {self.t('accuracy')}", "small", SOFT, (card.right - 60, card.top + 90), "midright")
 
@@ -487,7 +493,9 @@ class App:
                 self.state = "menu"
             elif event.key == pygame.K_BACKSPACE:
                 self.name_input = self.name_input[:-1]
-            elif event.key == pygame.K_ESCAPE and self.name:
+            elif event.key == pygame.K_ESCAPE:
+                if not self.name:
+                    return False
                 self.state = "menu"
         elif self.state == "menu":
             if event.key == pygame.K_LEFT:

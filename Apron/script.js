@@ -25,28 +25,86 @@ function parseNum(str, lang){
     return parseFloat(String(str).split(s.group).join('').replace(s.dec, '.'));
 }
 
-// Live-format a number input while typing, keeping the caret where the user expects it.
-// A typed "." or "," is always treated as the decimal key; thousands separators are inserted automatically.
-function formatNumberInput(e, maxDecimals){
+// Live-format a number field while typing, keeping the caret where the user expects it.
+// Thousands separators are added automatically and a typed "." or "," is always the decimal key.
+// Pasted numbers are read in either style ("1,234.56" or "1.234,56"), so nothing is off by 10× or 1000×.
+const MAX_INT_DIGITS = 12;
+
+// max (optional) settles "22.078" in a percent field: 22078 can't be right there, so it's 22,078
+function normalizePastedNumber(text, dec, max){
+    const t = String(text).replace(/[^\d.,]/g, '');
+    const lastDot = t.lastIndexOf('.');
+    const lastComma = t.lastIndexOf(',');
+    let decAt = -1;
+    if(lastDot !== -1 && lastComma !== -1){
+        decAt = Math.max(lastDot, lastComma); // both marks used: the last one is the decimal
+    } else if(lastDot !== -1 || lastComma !== -1){
+        const at = Math.max(lastDot, lastComma);
+        const repeated = t.indexOf(t[at]) !== at;                       // "1.234.567"
+        const looksGrouped = t.length - at - 1 === 3 && t[at] !== dec;  // "1.234" where "." groups thousands
+        const fitsGrouped = !max || Number(t.replace(/[.,]/g, '')) <= max;
+        if(!repeated && !(looksGrouped && fitsGrouped)) decAt = at;
+    }
+    let out = '';
+    for(let i = 0; i < t.length; i++){
+        if(i === decAt) out += dec;
+        else if(t[i] >= '0' && t[i] <= '9') out += t[i];
+    }
+    return out;
+}
+
+// Handles what the browser can't: the decimal key, pasted text, and deleting across a separator
+function numberBeforeInput(e){
     const input = e.target;
     const s = numSeps();
-    let v = input.value;
-    const caret = input.selectionStart;
-    if(e.data === '.' || e.data === ','){ v = v.slice(0, caret - 1) + s.dec + v.slice(caret); }
+    const v = input.value;
+    const start = input.selectionStart, end = input.selectionEnd;
+    let next = null, caret = start;
+    if(/^insert(Text|FromPaste|FromDrop|ReplacementText)$/.test(e.inputType)){
+        let text = e.data;
+        if(text == null && e.dataTransfer) text = e.dataTransfer.getData('text/plain');
+        if(!text || /^\d$/.test(text)) return; // a single digit needs no help
+        const max = Number(input.getAttribute('data-max')) || 0;
+        const chunk = text === '.' || text === ',' ? s.dec : normalizePastedNumber(text, s.dec, max);
+        next = v.slice(0, start) + chunk + v.slice(end);
+        caret = start + chunk.length;
+    } else if(start === end && e.inputType === 'deleteContentBackward' && v[start - 1] === s.group){
+        next = v.slice(0, start - 2) + v.slice(start); // Backspace after "1.|000" removes the 1
+        caret = start - 2;
+    } else if(start === end && e.inputType === 'deleteContentForward' && v[start] === s.group){
+        next = v.slice(0, start) + v.slice(start + 2);
+    }
+    if(next === null) return;
+    e.preventDefault();
+    input.value = next;
+    input.setSelectionRange(caret, caret);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+}
 
-    let digits = '', seenDec = false, sigBeforeCaret = 0;
+function formatNumberInput(input, maxDecimals){
+    const s = numSeps();
+    const v = input.value;
+    const caret = input.selectionStart;
+    let digits = '', seenDec = false, sigBeforeCaret = 0, decBeforeCaret = false;
     for(let i = 0; i < v.length; i++){
         const ch = v[i];
-        const keep = (ch >= '0' && ch <= '9') || (ch === s.dec && !seenDec && maxDecimals > 0);
-        if(ch === s.dec && keep) seenDec = true;
-        if(keep){ digits += ch; if(i < caret) sigBeforeCaret++; }
+        const keep = (ch >= '0' && ch <= '9') || (ch === s.dec && !seenDec);
+        if(!keep) continue;
+        if(ch === s.dec){ seenDec = true; if(i < caret) decBeforeCaret = true; }
+        digits += ch;
+        if(i < caret) sigBeforeCaret++;
     }
 
     const split = digits.split(s.dec);
     let intPart = split[0];
-    if(intPart === '' && seenDec){ intPart = '0'; sigBeforeCaret++; }
-    const fracPart = seenDec ? (split[1] || '').slice(0, maxDecimals) : '';
-    const result = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, s.group) + (seenDec ? s.dec + fracPart : '');
+    const zeros = intPart.length - intPart.replace(/^0+(?=\d)/, '').length; // "007" → "7"
+    intPart = intPart.slice(zeros, zeros + MAX_INT_DIGITS);
+    sigBeforeCaret = Math.max(0, sigBeforeCaret - zeros);
+    const showDec = seenDec && maxDecimals > 0;
+    if(seenDec && !showDec && decBeforeCaret) sigBeforeCaret--;
+    if(intPart === '' && showDec){ intPart = '0'; sigBeforeCaret++; }
+    const fracPart = showDec ? (split[1] || '').slice(0, maxDecimals) : '';
+    const result = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, s.group) + (showDec ? s.dec + fracPart : '');
 
     let pos = 0, count = 0;
     while(pos < result.length && count < sigBeforeCaret){
@@ -57,14 +115,16 @@ function formatNumberInput(e, maxDecimals){
     input.setSelectionRange(pos, pos);
 }
 
-function toInputValue(n){
-    if(n === null || n === undefined || isNaN(n)) return '';
-    const scaled = Math.round(n * 1000);
-    const decimals = scaled % 1000 === 0 ? 0 : (scaled % 100 === 0 ? 1 : (scaled % 10 === 0 ? 2 : 3));
-    return fmt(n, decimals);
+// A number as the user would type it: 1.250 · 8,25 · 1.250,5 (no trailing zeros)
+function toInputValue(n, maxDecimals){
+    if(n === null || n === undefined || n === '' || isNaN(n)) return '';
+    const fixed = Number(n).toFixed(maxDecimals === undefined ? 2 : maxDecimals);
+    const frac = fixed.split('.')[1] || '';
+    return fmt(Number(fixed), frac.replace(/0+$/, '').length);
 }
 
-const NUMBER_INPUTS = ['customTip', 'taxRatePct'];
+// Number fields and how many decimals each accepts
+const NUMBER_INPUTS = { customTip: 2, taxRatePct: 3 };
 
 const menuData = {
     es: [
@@ -111,7 +171,7 @@ const i18n = {
         taxRateHint:'Ingresa la tasa real de impuesto a las ventas de tu ciudad/estado (ej: 8,25). Varía según el lugar — no usamos un valor automático.',
         addBtn:'Agregar', orderTypeTitle:'🚗 Tipo de pedido', pickup:'Recoger', pickupSub:'Gratis',
         delivery:'Delivery', deliveryFeeLabel:'Costo de envío',
-        noteTitle:'📝 Nota para tu pedido (opcional)', notePh:'Ej: sin cebolla, alergia a los frutos secos, tocar el timbre...',
+        noteTitle:'📝 Nota para tu pedido (opcional)', modalNoteTitle:'📝 Nota', notePh:'Ej: sin cebolla, alergia a los frutos secos, tocar el timbre...',
         checkoutTitle:'📇 Datos de contacto', nameLabel:'Nombre completo', namePh:'Tu nombre',
         phoneLabel:'Número de teléfono', phonePh:'(555) 123-4567',
         addressLabel:'Dirección de entrega', addressPh:'Calle, número, apto, ciudad',
@@ -134,7 +194,7 @@ const i18n = {
         taxRateHint:'Enter the real sales tax rate for your city/state (e.g. 8.25). It varies by location — we don\'t use an automatic value.',
         addBtn:'Add', orderTypeTitle:'🚗 Order type', pickup:'Pickup', pickupSub:'Free',
         delivery:'Delivery', deliveryFeeLabel:'Delivery fee',
-        noteTitle:'📝 Note for your order (optional)', notePh:'E.g: no onion, nut allergy, ring the bell...',
+        noteTitle:'📝 Note for your order (optional)', modalNoteTitle:'📝 Note', notePh:'E.g: no onion, nut allergy, ring the bell...',
         checkoutTitle:'📇 Contact details', nameLabel:'Full name', namePh:'Your name',
         phoneLabel:'Phone number', phonePh:'(555) 123-4567',
         addressLabel:'Delivery address', addressPh:'Street, number, apt, city',
@@ -153,6 +213,7 @@ let tipPct = 0;
 let orderType = 'pickup';
 const DELIVERY_FEE = 6.00;
 const qtySelections = {};
+let lastBill = null;
 
 function applyLang(lang){
     currentLang = lang;
@@ -174,9 +235,10 @@ function applyLang(lang){
 
 function setLang(lang){
     const prevLang = currentLang;
-    const values = NUMBER_INPUTS.map(function(id){ return parseNum(document.getElementById(id).value, prevLang); });
+    const ids = Object.keys(NUMBER_INPUTS);
+    const values = ids.map(function(id){ return parseNum(document.getElementById(id).value, prevLang); });
     applyLang(lang);
-    NUMBER_INPUTS.forEach(function(id, i){ document.getElementById(id).value = toInputValue(values[i]); });
+    ids.forEach(function(id, i){ document.getElementById(id).value = toInputValue(values[i], NUMBER_INPUTS[id]); });
     clearFieldErrors();
     renderMenu();
     renderCart();
@@ -287,6 +349,7 @@ function calcTotal(){
     document.getElementById('deliveryFeeAmt').textContent = money(deliveryFee);
     document.getElementById('tipAmt').textContent = money(tip);
     document.getElementById('total').textContent = money(total);
+    lastBill = { subtotal: subtotal, tax: tax, taxRatePct: taxRatePct, deliveryFee: deliveryFee, tip: tip, total: total };
     saveDraft();
 }
 
@@ -363,10 +426,17 @@ function restoreDraft(){
     tipPct = typeof draft.tipPct === 'number' ? draft.tipPct : 0;
 
     applyLang(draft.lang === 'en' ? 'en' : 'es');
+    // Drop anything in a saved cart that isn't a real dish with a sane quantity
+    Object.keys(cart).forEach(function(id){
+        const item = menu.find(function(m){ return m.id === Number(id); });
+        const qty = cart[id] && cart[id].qty;
+        if(!item || !Number.isInteger(qty) || qty < 1) delete cart[id];
+        else cart[id] = Object.assign({}, item, {qty: Math.min(qty, 99)});
+    });
 
     // Older drafts stored raw strings like "8.25"; Number() reads both
-    document.getElementById('customTip').value = toInputValue(draft.customTip === null || draft.customTip === '' ? NaN : Number(draft.customTip));
-    document.getElementById('taxRatePct').value = toInputValue(draft.taxRatePct === null || draft.taxRatePct === '' ? NaN : Number(draft.taxRatePct));
+    document.getElementById('customTip').value = toInputValue(draft.customTip === null || draft.customTip === '' ? NaN : Number(draft.customTip), NUMBER_INPUTS.customTip);
+    document.getElementById('taxRatePct').value = toInputValue(draft.taxRatePct === null || draft.taxRatePct === '' ? NaN : Number(draft.taxRatePct), NUMBER_INPUTS.taxRatePct);
     document.getElementById('orderNote').value = draft.orderNote || '';
     document.getElementById('custName').value = draft.custName || '';
     document.getElementById('custPhone').value = draft.custPhone || '';
@@ -434,12 +504,21 @@ function showOrderConfirmation(name, phone, address){
     document.getElementById('orderNumber').textContent = generateOrderNumber();
     document.getElementById('etaText').textContent = orderType === 'delivery' ? i18n[currentLang].etaDelivery : i18n[currentLang].etaPickup;
 
+    calcTotal();
+    const t = i18n[currentLang];
+    const row = function(label, value, cls){
+        return '<div class="modal-row' + (cls ? ' ' + cls : '') + '"><span>' + label + '</span><span>' + value + '</span></div>';
+    };
     const items = Object.values(cart);
-    document.getElementById('modalItems').innerHTML = items.map(function(i){
-        return '<div class="modal-row"><span>' + i.emoji + ' ' + i.name + ' × ' + i.qty + '</span><span>' + money(i.price*i.qty) + '</span></div>';
-    }).join('');
+    let html = items.map(function(i){ return row(i.emoji + ' ' + i.name + ' × ' + i.qty, money(i.price*i.qty)); }).join('');
+    // How the total is built, so it never looks like it came out of nowhere
+    html += row(t.subtotal, money(lastBill.subtotal), 'modal-sub first');
+    if(lastBill.tax > 0) html += row(t.tax + ' (' + fmtPct(lastBill.taxRatePct) + ' %)', money(lastBill.tax), 'modal-sub');
+    if(lastBill.deliveryFee > 0) html += row(t.deliveryFeeLabel, money(lastBill.deliveryFee), 'modal-sub');
+    if(lastBill.tip > 0) html += row(t.tip, money(lastBill.tip), 'modal-sub');
+    document.getElementById('modalItems').innerHTML = html;
 
-    document.getElementById('modalTotal').textContent = document.getElementById('total').textContent;
+    document.getElementById('modalTotal').textContent = money(lastBill.total);
     document.getElementById('modalName').textContent = name;
     document.getElementById('modalPhone').textContent = phone;
 
@@ -472,7 +551,12 @@ document.getElementById('orderModal').addEventListener('click', function(e){
 });
 
 document.addEventListener('keydown', function(e){
-    if(e.key === 'Escape') closeModal();
+    if(e.key !== 'Escape') return;
+    closeModal();
+    // Esc also backs out of renaming, as long as the restaurant already has a name
+    if(!document.getElementById('appWrapper').classList.contains('hidden')){
+        document.getElementById('welcomeOverlay').classList.add('hidden');
+    }
 });
 
 function newOrder(){
@@ -481,21 +565,23 @@ function newOrder(){
 }
 
 document.getElementById('customTip').addEventListener('input', function(e){
-    formatNumberInput(e, 2);
+    formatNumberInput(e.target, NUMBER_INPUTS.customTip);
     tipPct = 0;
     document.querySelectorAll('.tip-btn').forEach(function(b){ b.classList.remove('active'); });
     calcTotal();
 });
 
 document.getElementById('taxRatePct').addEventListener('input', function(e){
-    formatNumberInput(e, 3);
-    if((parseNum(e.target.value) || 0) > 100) e.target.value = toInputValue(100);
+    formatNumberInput(e.target, NUMBER_INPUTS.taxRatePct);
+    if((parseNum(e.target.value) || 0) > 100) e.target.value = toInputValue(100, NUMBER_INPUTS.taxRatePct);
     calcTotal();
 });
 
-NUMBER_INPUTS.forEach(function(id){
-    document.getElementById(id).addEventListener('blur', function(e){
-        e.target.value = toInputValue(parseNum(e.target.value));
+Object.keys(NUMBER_INPUTS).forEach(function(id){
+    const input = document.getElementById(id);
+    input.addEventListener('beforeinput', numberBeforeInput);
+    input.addEventListener('blur', function(){
+        input.value = toInputValue(parseNum(input.value), NUMBER_INPUTS[id]);
     });
 });
 

@@ -14,7 +14,7 @@ function fmt(n, decimals){
 
 // -$1.250,00 instead of $-1.250,00, and "AED 1.250,00" gets a space after letter symbols
 function money(n, sym, decimals){
-    const space = /[A-Za-z]$/.test(sym) ? ' ' : '';
+    const space = /[A-Za-zÀ-ÿĀ-ž.]$/.test(sym) ? ' ' : '';
     const rounded = Number(Math.abs(n).toFixed(decimals === undefined ? 2 : decimals));
     return (n < 0 && rounded !== 0 ? '-' : '') + sym + space + fmt(Math.abs(n), decimals);
 }
@@ -25,28 +25,86 @@ function parseNum(str, lang){
     return parseFloat(String(str).split(s.group).join('').replace(s.dec, '.'));
 }
 
-// Live-format a number input while typing, keeping the caret where the user expects it.
-// A typed "." or "," is always treated as the decimal key; thousands separators are inserted automatically.
-function formatNumberInput(e, maxDecimals){
+// Live-format a number field while typing, keeping the caret where the user expects it.
+// Thousands separators are added automatically and a typed "." or "," is always the decimal key.
+// Pasted numbers are read in either style ("1,234.56" or "1.234,56"), so nothing is off by 10× or 1000×.
+const MAX_INT_DIGITS = 12;
+
+// max (optional) settles "22.078" in a percent field: 22078 can't be right there, so it's 22,078
+function normalizePastedNumber(text, dec, max){
+    const t = String(text).replace(/[^\d.,]/g, '');
+    const lastDot = t.lastIndexOf('.');
+    const lastComma = t.lastIndexOf(',');
+    let decAt = -1;
+    if(lastDot !== -1 && lastComma !== -1){
+        decAt = Math.max(lastDot, lastComma); // both marks used: the last one is the decimal
+    } else if(lastDot !== -1 || lastComma !== -1){
+        const at = Math.max(lastDot, lastComma);
+        const repeated = t.indexOf(t[at]) !== at;                       // "1.234.567"
+        const looksGrouped = t.length - at - 1 === 3 && t[at] !== dec;  // "1.234" where "." groups thousands
+        const fitsGrouped = !max || Number(t.replace(/[.,]/g, '')) <= max;
+        if(!repeated && !(looksGrouped && fitsGrouped)) decAt = at;
+    }
+    let out = '';
+    for(let i = 0; i < t.length; i++){
+        if(i === decAt) out += dec;
+        else if(t[i] >= '0' && t[i] <= '9') out += t[i];
+    }
+    return out;
+}
+
+// Handles what the browser can't: the decimal key, pasted text, and deleting across a separator
+function numberBeforeInput(e){
     const input = e.target;
     const s = numSeps();
-    let v = input.value;
-    const caret = input.selectionStart;
-    if(e.data === '.' || e.data === ','){ v = v.slice(0, caret - 1) + s.dec + v.slice(caret); }
+    const v = input.value;
+    const start = input.selectionStart, end = input.selectionEnd;
+    let next = null, caret = start;
+    if(/^insert(Text|FromPaste|FromDrop|ReplacementText)$/.test(e.inputType)){
+        let text = e.data;
+        if(text == null && e.dataTransfer) text = e.dataTransfer.getData('text/plain');
+        if(!text || /^\d$/.test(text)) return; // a single digit needs no help
+        const max = Number(input.getAttribute('data-max')) || 0;
+        const chunk = text === '.' || text === ',' ? s.dec : normalizePastedNumber(text, s.dec, max);
+        next = v.slice(0, start) + chunk + v.slice(end);
+        caret = start + chunk.length;
+    } else if(start === end && e.inputType === 'deleteContentBackward' && v[start - 1] === s.group){
+        next = v.slice(0, start - 2) + v.slice(start); // Backspace after "1.|000" removes the 1
+        caret = start - 2;
+    } else if(start === end && e.inputType === 'deleteContentForward' && v[start] === s.group){
+        next = v.slice(0, start) + v.slice(start + 2);
+    }
+    if(next === null) return;
+    e.preventDefault();
+    input.value = next;
+    input.setSelectionRange(caret, caret);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+}
 
-    let digits = '', seenDec = false, sigBeforeCaret = 0;
+function formatNumberInput(input, maxDecimals){
+    const s = numSeps();
+    const v = input.value;
+    const caret = input.selectionStart;
+    let digits = '', seenDec = false, sigBeforeCaret = 0, decBeforeCaret = false;
     for(let i = 0; i < v.length; i++){
         const ch = v[i];
-        const keep = (ch >= '0' && ch <= '9') || (ch === s.dec && !seenDec && maxDecimals > 0);
-        if(ch === s.dec && keep) seenDec = true;
-        if(keep){ digits += ch; if(i < caret) sigBeforeCaret++; }
+        const keep = (ch >= '0' && ch <= '9') || (ch === s.dec && !seenDec);
+        if(!keep) continue;
+        if(ch === s.dec){ seenDec = true; if(i < caret) decBeforeCaret = true; }
+        digits += ch;
+        if(i < caret) sigBeforeCaret++;
     }
 
     const split = digits.split(s.dec);
     let intPart = split[0];
-    if(intPart === '' && seenDec){ intPart = '0'; sigBeforeCaret++; }
-    const fracPart = seenDec ? (split[1] || '').slice(0, maxDecimals) : '';
-    const result = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, s.group) + (seenDec ? s.dec + fracPart : '');
+    const zeros = intPart.length - intPart.replace(/^0+(?=\d)/, '').length; // "007" → "7"
+    intPart = intPart.slice(zeros, zeros + MAX_INT_DIGITS);
+    sigBeforeCaret = Math.max(0, sigBeforeCaret - zeros);
+    const showDec = seenDec && maxDecimals > 0;
+    if(seenDec && !showDec && decBeforeCaret) sigBeforeCaret--;
+    if(intPart === '' && showDec){ intPart = '0'; sigBeforeCaret++; }
+    const fracPart = showDec ? (split[1] || '').slice(0, maxDecimals) : '';
+    const result = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, s.group) + (showDec ? s.dec + fracPart : '');
 
     let pos = 0, count = 0;
     while(pos < result.length && count < sigBeforeCaret){
@@ -57,25 +115,34 @@ function formatNumberInput(e, maxDecimals){
     input.setSelectionRange(pos, pos);
 }
 
-function toInputValue(n){
+// A number as the user would type it: 1.250 · 8,25 · 1.250,5 (no trailing zeros)
+function toInputValue(n, maxDecimals){
     if(n === null || n === undefined || n === '' || isNaN(n)) return '';
-    const cents = Math.round(n * 100);
-    return fmt(n, cents % 100 === 0 ? 0 : (cents % 10 === 0 ? 1 : 2));
+    const fixed = Number(n).toFixed(maxDecimals === undefined ? 2 : maxDecimals);
+    const frac = fixed.split('.')[1] || '';
+    return fmt(Number(fixed), frac.replace(/0+$/, '').length);
 }
 
 function numVal(id){ return parseNum(document.getElementById(id).value); }
 
 // Every .num-input gets live separators; data-decimals sets how many decimals it accepts (default 2)
+function isNumInput(el){ return el.classList && el.classList.contains('num-input'); }
+function decimalsOf(el){ return parseInt(el.getAttribute('data-decimals') || '2', 10); }
+
+document.addEventListener('beforeinput', function(e){
+    if(isNumInput(e.target)) numberBeforeInput(e);
+}, true);
+
 document.addEventListener('input', function(e){
-    if(!e.target.classList || !e.target.classList.contains('num-input')) return;
-    formatNumberInput(e, parseInt(e.target.getAttribute('data-decimals') || '2', 10));
+    if(!isNumInput(e.target)) return;
+    formatNumberInput(e.target, decimalsOf(e.target));
     const max = e.target.getAttribute('data-max');
-    if(max && (parseNum(e.target.value) || 0) > Number(max)) e.target.value = toInputValue(Number(max));
+    if(max && (parseNum(e.target.value) || 0) > Number(max)) e.target.value = toInputValue(Number(max), decimalsOf(e.target));
 }, true);
 
 document.addEventListener('blur', function(e){
-    if(!e.target.classList || !e.target.classList.contains('num-input')) return;
-    e.target.value = toInputValue(parseNum(e.target.value));
+    if(!isNumInput(e.target)) return;
+    e.target.value = toInputValue(parseNum(e.target.value), decimalsOf(e.target));
 }, true);
 
 // Once the plan is on screen it updates live as you type
@@ -149,11 +216,11 @@ const countries = [
     { code:'PE', currency:'S/', name_es:'Perú', name_en:'Peru' },
     { code:'BR', currency:'R$', name_es:'Brasil', name_en:'Brazil' },
     { code:'UY', currency:'UY$', name_es:'Uruguay', name_en:'Uruguay' },
-    { code:'PY', currency:'G', name_es:'Paraguay', name_en:'Paraguay' },
+    { code:'PY', currency:'₲', name_es:'Paraguay', name_en:'Paraguay' },
     { code:'BO', currency:'Bs', name_es:'Bolivia', name_en:'Bolivia' },
     { code:'EC', currency:'$', name_es:'Ecuador', name_en:'Ecuador' },
     { code:'PA', currency:'B/.', name_es:'Panamá', name_en:'Panama' },
-    { code:'CR', currency:'C', name_es:'Costa Rica', name_en:'Costa Rica' },
+    { code:'CR', currency:'₡', name_es:'Costa Rica', name_en:'Costa Rica' },
     { code:'GT', currency:'Q', name_es:'Guatemala', name_en:'Guatemala' },
     { code:'HN', currency:'L', name_es:'Honduras', name_en:'Honduras' },
     { code:'NI', currency:'C$', name_es:'Nicaragua', name_en:'Nicaragua' },
@@ -171,7 +238,7 @@ const countries = [
     { code:'NO', currency:'kr', name_es:'Noruega', name_en:'Norway' },
     { code:'DK', currency:'kr', name_es:'Dinamarca', name_en:'Denmark' },
     { code:'FI', currency:'€', name_es:'Finlandia', name_en:'Finland' },
-    { code:'PL', currency:'zl', name_es:'Polonia', name_en:'Poland' },
+    { code:'PL', currency:'zł', name_es:'Polonia', name_en:'Poland' },
     { code:'GR', currency:'€', name_es:'Grecia', name_en:'Greece' },
     { code:'IE', currency:'€', name_es:'Irlanda', name_en:'Ireland' },
     { code:'RO', currency:'lei', name_es:'Rumania', name_en:'Romania' },
@@ -338,7 +405,7 @@ function setLang(lang){
     const numValues = numInputs.map(function(el){ return parseNum(el.value, prevLang); });
     currentLang = lang;
     document.documentElement.lang = lang;
-    numInputs.forEach(function(el, i){ el.value = toInputValue(numValues[i]); });
+    numInputs.forEach(function(el, i){ el.value = toInputValue(numValues[i], decimalsOf(el)); });
     document.getElementById('langEs').classList.toggle('active', lang==='es');
     document.getElementById('langEn').classList.toggle('active', lang==='en');
     document.getElementById('welcomeLangEs').classList.toggle('active', lang==='es');
@@ -532,7 +599,8 @@ const OLD_DRAFT_KEY = 'brujulaFinancieraDraft';
 
 // Drafts store plain numbers ("1250.5") so they survive a language switch; old drafts used the same format
 function draftNum(id){ const n = numVal(id); return isNaN(n) ? '' : String(n); }
-function fromDraftNum(v){ return v === undefined || v === null || v === '' ? '' : toInputValue(Number(v)); }
+// Saved values already respect each field's decimals, so 3 never adds precision that wasn't typed
+function fromDraftNum(v){ return v === undefined || v === null || v === '' ? '' : toInputValue(Number(v), 3); }
 
 function escapeHtml(str){
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -677,6 +745,13 @@ function initUserSetup(){
 
 document.getElementById('userNameInput').addEventListener('keydown', function(e){
     if(e.key === 'Enter') startJourney();
+});
+
+// Esc backs out of renaming, as long as a name is already saved
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && !document.getElementById('appWrapper').classList.contains('hidden')){
+        document.getElementById('welcomeOverlay').classList.add('hidden');
+    }
 });
 
 // Enter in any field calculates the plan

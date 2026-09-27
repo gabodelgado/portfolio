@@ -93,7 +93,7 @@
             <div class="tip-zone">
                 <div class="tip-title" data-i18n="taxRateTitle">🧾 Impuesto de venta local (%)</div>
                 <div class="field-hint" data-i18n="taxRateHint">Ingresa la tasa real de impuesto a las ventas de tu ciudad/estado (ej: 8.25). Varía según el lugar — no usamos un valor automático.</div>
-                <input type="text" inputmode="decimal" autocomplete="off" class="custom-tip" id="taxRatePct" data-i18n-ph="taxPh">
+                <input type="text" inputmode="decimal" autocomplete="off" class="custom-tip" id="taxRatePct" data-max="100" data-i18n-ph="taxPh">
             </div>
 
             <div class="note-zone">
@@ -146,7 +146,7 @@
         </div>
 
         <div class="modal-section" id="modalNoteSection" style="display:none;">
-            <div class="modal-section-title" data-i18n="noteTitle">📝 Nota para tu pedido (opcional)</div>
+            <div class="modal-section-title" data-i18n="modalNoteTitle">📝 Nota</div>
             <div id="modalNote" style="font-size:12.5px; color:#2e2018; line-height:1.4;"></div>
         </div>
 

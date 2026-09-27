@@ -99,7 +99,7 @@ const symbols = {
 };
 
 const i18n = {
-    es: { title:'SWAP', subtitle:'Tasas de mercado en tiempo real, sin comisión', live:'TASA EN VIVO',
+    es: { title:'SWAP', subtitle:'Tasas reales del mercado, sin comisión', live:'TASAS AL DÍA',
         loadingRates:'Actualizando tasas...', offlineRates:'Sin conexión', cachedRates:'Últimas tasas guardadas (sin conexión)',
         youSend:'Envías', theyReceive:'Reciben', totalReceive:'Total a recibir',
         noFees:'Sin comisiones · Sin cargos ocultos · Tasa real', updated:'Última actualización:', searchPh:'Buscar moneda o país...',
@@ -107,8 +107,8 @@ const i18n = {
         noRatesTs:'Aún no hay tasas descargadas en este dispositivo',
         noResults:'Sin resultados', refresh:'Actualizar tasas', swapLabel:'Intercambiar monedas',
         welcomeTitle:'¿En qué moneda piensas?', welcomeSub:'Elige tu moneda local y la usaremos como punto de partida cada vez que abras la app.',
-        welcomeBtn:'Comenzar →', changeHome:'Cambiar moneda local' },
-    en: { title:'SWAP', subtitle:'Live mid-market rates, zero markup', live:'LIVE RATES',
+        welcomeBtn:'Comenzar →', changeHome:'Cambiar moneda local', ratesBy:'Tasas de' },
+    en: { title:'SWAP', subtitle:'Real mid-market rates, zero markup', live:'RATES UP TO DATE',
         loadingRates:'Updating rates...', offlineRates:'Offline', cachedRates:'Last saved rates (offline)',
         youSend:'You send', theyReceive:'They receive', totalReceive:'Total to receive',
         noFees:'No fees · No hidden charges · Real exchange rate', updated:'Last updated:', searchPh:'Search currency or country...',
@@ -116,7 +116,7 @@ const i18n = {
         noRatesTs:'No rates downloaded on this device yet',
         noResults:'No results', refresh:'Refresh rates', swapLabel:'Swap currencies',
         welcomeTitle:'What\'s your home currency?', welcomeSub:'Pick your local currency and we\'ll use it as your starting point every time you open the app.',
-        welcomeBtn:'Get started →', changeHome:'Change home currency' }
+        welcomeBtn:'Get started →', changeHome:'Change home currency', ratesBy:'Rates by' }
 };
 let currentLang = 'es';
 let fromValue = 'USD';
@@ -165,28 +165,86 @@ function formatRate(rate){
     return fmt(rate, decimals);
 }
 
-// Live-format a money input while typing, keeping the caret where the user expects it.
-// A typed "." or "," is always treated as the decimal key; thousands separators are inserted automatically.
-function formatMoneyInput(e, maxDecimals){
+// Live-format a number field while typing, keeping the caret where the user expects it.
+// Thousands separators are added automatically and a typed "." or "," is always the decimal key.
+// Pasted numbers are read in either style ("1,234.56" or "1.234,56"), so nothing is off by 10× or 1000×.
+const MAX_INT_DIGITS = 12;
+
+// max (optional) settles "22.078" in a percent field: 22078 can't be right there, so it's 22,078
+function normalizePastedNumber(text, dec, max){
+    const t = String(text).replace(/[^\d.,]/g, '');
+    const lastDot = t.lastIndexOf('.');
+    const lastComma = t.lastIndexOf(',');
+    let decAt = -1;
+    if(lastDot !== -1 && lastComma !== -1){
+        decAt = Math.max(lastDot, lastComma); // both marks used: the last one is the decimal
+    } else if(lastDot !== -1 || lastComma !== -1){
+        const at = Math.max(lastDot, lastComma);
+        const repeated = t.indexOf(t[at]) !== at;                       // "1.234.567"
+        const looksGrouped = t.length - at - 1 === 3 && t[at] !== dec;  // "1.234" where "." groups thousands
+        const fitsGrouped = !max || Number(t.replace(/[.,]/g, '')) <= max;
+        if(!repeated && !(looksGrouped && fitsGrouped)) decAt = at;
+    }
+    let out = '';
+    for(let i = 0; i < t.length; i++){
+        if(i === decAt) out += dec;
+        else if(t[i] >= '0' && t[i] <= '9') out += t[i];
+    }
+    return out;
+}
+
+// Handles what the browser can't: the decimal key, pasted text, and deleting across a separator
+function numberBeforeInput(e){
     const input = e.target;
     const s = numSeps();
-    let v = input.value;
-    const caret = input.selectionStart;
-    if(e.data === '.' || e.data === ','){ v = v.slice(0, caret - 1) + s.dec + v.slice(caret); }
+    const v = input.value;
+    const start = input.selectionStart, end = input.selectionEnd;
+    let next = null, caret = start;
+    if(/^insert(Text|FromPaste|FromDrop|ReplacementText)$/.test(e.inputType)){
+        let text = e.data;
+        if(text == null && e.dataTransfer) text = e.dataTransfer.getData('text/plain');
+        if(!text || /^\d$/.test(text)) return; // a single digit needs no help
+        const max = Number(input.getAttribute('data-max')) || 0;
+        const chunk = text === '.' || text === ',' ? s.dec : normalizePastedNumber(text, s.dec, max);
+        next = v.slice(0, start) + chunk + v.slice(end);
+        caret = start + chunk.length;
+    } else if(start === end && e.inputType === 'deleteContentBackward' && v[start - 1] === s.group){
+        next = v.slice(0, start - 2) + v.slice(start); // Backspace after "1.|000" removes the 1
+        caret = start - 2;
+    } else if(start === end && e.inputType === 'deleteContentForward' && v[start] === s.group){
+        next = v.slice(0, start) + v.slice(start + 2);
+    }
+    if(next === null) return;
+    e.preventDefault();
+    input.value = next;
+    input.setSelectionRange(caret, caret);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+}
 
-    let digits = '', seenDec = false, sigBeforeCaret = 0;
+function formatNumberInput(input, maxDecimals){
+    const s = numSeps();
+    const v = input.value;
+    const caret = input.selectionStart;
+    let digits = '', seenDec = false, sigBeforeCaret = 0, decBeforeCaret = false;
     for(let i = 0; i < v.length; i++){
         const ch = v[i];
-        const keep = (ch >= '0' && ch <= '9') || (ch === s.dec && !seenDec && maxDecimals > 0);
-        if(ch === s.dec && keep) seenDec = true;
-        if(keep){ digits += ch; if(i < caret) sigBeforeCaret++; }
+        const keep = (ch >= '0' && ch <= '9') || (ch === s.dec && !seenDec);
+        if(!keep) continue;
+        if(ch === s.dec){ seenDec = true; if(i < caret) decBeforeCaret = true; }
+        digits += ch;
+        if(i < caret) sigBeforeCaret++;
     }
 
     const split = digits.split(s.dec);
     let intPart = split[0];
-    if(intPart === '' && seenDec){ intPart = '0'; sigBeforeCaret++; }
-    const fracPart = seenDec ? (split[1] || '').slice(0, maxDecimals) : '';
-    const result = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, s.group) + (seenDec ? s.dec + fracPart : '');
+    const zeros = intPart.length - intPart.replace(/^0+(?=\d)/, '').length; // "007" → "7"
+    intPart = intPart.slice(zeros, zeros + MAX_INT_DIGITS);
+    sigBeforeCaret = Math.max(0, sigBeforeCaret - zeros);
+    const showDec = seenDec && maxDecimals > 0;
+    if(seenDec && !showDec && decBeforeCaret) sigBeforeCaret--;
+    if(intPart === '' && showDec){ intPart = '0'; sigBeforeCaret++; }
+    const fracPart = showDec ? (split[1] || '').slice(0, maxDecimals) : '';
+    const result = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, s.group) + (showDec ? s.dec + fracPart : '');
 
     let pos = 0, count = 0;
     while(pos < result.length && count < sigBeforeCaret){
@@ -197,10 +255,12 @@ function formatMoneyInput(e, maxDecimals){
     input.setSelectionRange(pos, pos);
 }
 
-function toInputValue(n){
-    if(n === null || isNaN(n)) return '';
-    const cents = Math.round(n * 100);
-    return fmt(n, cents % 100 === 0 ? 0 : (cents % 10 === 0 ? 1 : 2));
+// A number as the user would type it: 1.250 · 8,25 · 1.250,5 (no trailing zeros)
+function toInputValue(n, maxDecimals){
+    if(n === null || n === undefined || n === '' || isNaN(n)) return '';
+    const fixed = Number(n).toFixed(maxDecimals === undefined ? 2 : maxDecimals);
+    const frac = fixed.split('.')[1] || '';
+    return fmt(Number(fixed), frac.replace(/0+$/, '').length);
 }
 
 function sortedCodes(){
@@ -209,11 +269,13 @@ function sortedCodes(){
     });
 }
 
-function itemsHtml(codes, which){
+// The keyboard highlight starts on the current currency (so Enter keeps it), or on the first search match
+function itemsHtml(codes, which, highlightSelected){
     if(codes.length === 0) return '<div class="ccy-empty">' + i18n[currentLang].noResults + '</div>';
     const selected = which === 'from' ? fromValue : (which === 'to' ? toValue : homeSelection);
-    return codes.map(function(code, idx){
-        return '<div class="ccy-item' + (code === selected ? ' selected' : '') + (idx === 0 ? ' highlighted' : '') + '" data-code="' + code + '" onclick="selectCurrency(\'' + which + '\',\'' + code + '\')">' +
+    const highlight = highlightSelected && codes.indexOf(selected) !== -1 ? selected : codes[0];
+    return codes.map(function(code){
+        return '<div class="ccy-item' + (code === selected ? ' selected' : '') + (code === highlight ? ' highlighted' : '') + '" data-code="' + code + '" onclick="selectCurrency(\'' + which + '\',\'' + code + '\')">' +
             '<span class="flag">' + flags[code] + '</span>' +
             '<span class="code">' + code + '</span>' +
             '<span class="name">' + names[currentLang][code] + '</span></div>';
@@ -221,7 +283,7 @@ function itemsHtml(codes, which){
 }
 
 function buildList(which){
-    document.getElementById(which + 'List').innerHTML = itemsHtml(sortedCodes(), which);
+    document.getElementById(which + 'List').innerHTML = itemsHtml(sortedCodes(), which, true);
 }
 
 // Accent-insensitive search: "dolar" finds "Dólar", "yen" finds "Yen Japonés"
@@ -236,7 +298,7 @@ function filterList(which){
             normalize(names.es[code]).indexOf(query) !== -1 ||
             normalize(names.en[code]).indexOf(query) !== -1;
     });
-    document.getElementById(which + 'List').innerHTML = itemsHtml(codes, which);
+    document.getElementById(which + 'List').innerHTML = itemsHtml(codes, which, query === '');
 }
 
 function closeAllDropdowns(){
@@ -286,6 +348,7 @@ function updateTriggers(){
     document.getElementById('toNameHint').textContent = names[currentLang][toValue];
     document.getElementById('homeTriggerFlag').textContent = flags[homeSelection];
     document.getElementById('homeTriggerText').textContent = homeSelection;
+    document.getElementById('homeTriggerName').textContent = names[currentLang][homeSelection];
 }
 
 function selectCurrency(which, code){
@@ -301,7 +364,10 @@ function selectCurrency(which, code){
     }
     updateTriggers();
     document.getElementById(which + 'Panel').classList.remove('open');
-    if(which !== 'home') calculate();
+    if(which !== 'home'){
+        fitAmountToCurrency();
+        calculate();
+    }
 }
 
 document.addEventListener('click', function(e){
@@ -341,6 +407,7 @@ function swapCurrencies(){
     fromValue = toValue;
     toValue = f;
     updateTriggers();
+    fitAmountToCurrency();
     calculate();
 }
 
@@ -418,7 +485,7 @@ function setLang(lang){
     const prevLang = currentLang;
     const amount = parseNum(amountInput.value, prevLang);
     applyLang(lang);
-    amountInput.value = toInputValue(amount);
+    amountInput.value = toInputValue(amount, currencyDigits(fromValue));
     try{ localStorage.setItem(LANG_KEY, lang); } catch(err){ /* ignore */ }
     ['from','to','home'].forEach(function(w){
         if(document.getElementById(w + 'Panel').classList.contains('open')) filterList(w);
@@ -429,15 +496,22 @@ function setLang(lang){
     calculate();
 }
 
-amountInput.addEventListener('input', function(e){
-    formatMoneyInput(e, currencyDigits(fromValue));
+amountInput.addEventListener('beforeinput', numberBeforeInput);
+
+amountInput.addEventListener('input', function(){
+    formatNumberInput(amountInput, currencyDigits(fromValue));
     calculate();
 });
 
 amountInput.addEventListener('blur', function(){
-    const n = parseNum(amountInput.value);
-    amountInput.value = isNaN(n) ? '' : toInputValue(n);
+    amountInput.value = toInputValue(parseNum(amountInput.value), currencyDigits(fromValue));
 });
+
+// Switching to a currency without cents (JPY, KRW, CLP) rounds the amount to what that currency can hold
+function fitAmountToCurrency(){
+    if(amountInput.value === '') return;
+    amountInput.value = toInputValue(parseNum(amountInput.value), currencyDigits(fromValue));
+}
 
 const HOME_CCY_KEY = 'swapHomeCurrency';
 
@@ -452,6 +526,7 @@ function startSwap(){
     try{ localStorage.setItem(HOME_CCY_KEY, homeSelection); } catch(err){ /* ignore */ }
     showMain();
     updateTriggers();
+    fitAmountToCurrency();
     calculate();
     amountInput.focus();
     amountInput.select();
@@ -479,7 +554,7 @@ function initLang(){
     let saved = null;
     try{ saved = localStorage.getItem(LANG_KEY); } catch(err){ /* ignore */ }
     applyLang(saved === 'en' ? 'en' : 'es');
-    amountInput.value = toInputValue(100);
+    amountInput.value = toInputValue(100, 0);
 }
 
 initLang();
@@ -488,6 +563,7 @@ if(loadCachedRates()){
 }
 initHomeCurrency();
 updateTriggers();
+fitAmountToCurrency();
 calculate();
 updateTimestamp();
 fetchLiveRates();

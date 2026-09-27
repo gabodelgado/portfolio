@@ -21,6 +21,8 @@ import pygame
 WIDTH, HEIGHT = 960, 600
 FPS = 120
 WIN_SCORE = 7
+FIRST_SERVE_DELAY = 2.6  # long enough to read the controls before the first ball
+SERVE_DELAY = 1.0
 
 PADDLE_W, PADDLE_H = 14, 96
 PADDLE_SPEED = 520
@@ -112,15 +114,20 @@ def write_save(data):
 
 
 def make_tone(freq, ms, volume=0.35):
-    """Square-wave beep with a short fade-out, built as raw 16-bit samples."""
-    rate = 44100
+    """Square-wave beep with a short fade-out, built as raw 16-bit samples.
+
+    The samples follow whatever format the mixer actually opened with (rate and channel
+    count), otherwise a stereo device would play a mono buffer twice as fast and high.
+    """
+    rate, _, channels = pygame.mixer.get_init()
     count = int(rate * ms / 1000)
     period = rate / freq
     amp = int(32767 * volume)
     samples = array("h")
     for i in range(count):
-        fade = 1 - i / count
-        samples.append(int(amp * fade) if (i % period) < period / 2 else -int(amp * fade))
+        level = int(amp * (1 - i / count))
+        value = level if (i % period) < period / 2 else -level
+        samples.extend([value] * channels)
     return pygame.mixer.Sound(buffer=samples.tobytes())
 
 
@@ -128,7 +135,8 @@ class Sounds:
     def __init__(self):
         self.enabled = False
         try:
-            pygame.mixer.init(frequency=44100, size=-16, channels=1)
+            if not pygame.mixer.get_init():
+                pygame.mixer.init(frequency=44100, size=-16)
             self.paddle = make_tone(660, 60)
             self.wall = make_tone(440, 45, 0.25)
             self.score = make_tone(220, 260)
@@ -211,7 +219,8 @@ class Game:
         self.save = load_save()
         self.lang = self.save.get("lang", "es") if self.save.get("lang") in TEXT else "es"
         self.difficulty = self.save.get("difficulty", "normal") if self.save.get("difficulty") in CPU_LEVELS else "normal"
-        self.best_rally = int(self.save.get("best_rally", 0))
+        best = self.save.get("best_rally", 0)
+        self.best_rally = best if isinstance(best, int) and best >= 0 else 0
         self.menu_index = 0
         self.state = "menu"
         self.scanlines = self.build_scanlines()
@@ -268,7 +277,7 @@ class Game:
         self.particles = []
         self.rally = 0
         self.match_best_rally = 0
-        self.serve_timer = 1.2
+        self.serve_timer = FIRST_SERVE_DELAY
         self.cpu_target = HEIGHT / 2
         self.cpu_think = 0.0
         self.cpu_error = None
@@ -293,7 +302,7 @@ class Game:
             self.ball.reset(direction=-1 if scorer == 0 else 1)
             self.left.reset()
             self.right.reset()
-            self.serve_timer = 1.0
+            self.serve_timer = SERVE_DELAY
 
     def hit_paddle(self, paddle, direction):
         ball = self.ball
@@ -365,10 +374,10 @@ class Game:
                 ball.y = HEIGHT - BALL_SIZE / 2
                 ball.vy = -ball.vy
                 self.sounds.play("wall")
-            if ball.vx < 0 and ball.rect.colliderect(self.left.rect):
+            if ball.vx < 0 and ball.x > self.left.rect.centerx and ball.rect.colliderect(self.left.rect):
                 ball.x = self.left.rect.right + BALL_SIZE / 2
                 self.hit_paddle(self.left, 1)
-            elif ball.vx > 0 and ball.rect.colliderect(self.right.rect):
+            elif ball.vx > 0 and ball.x < self.right.rect.centerx and ball.rect.colliderect(self.right.rect):
                 ball.x = self.right.rect.left - BALL_SIZE / 2
                 self.hit_paddle(self.right, -1)
 
@@ -470,8 +479,13 @@ class Game:
                 offset = (random.randint(-amount, amount), random.randint(-amount, amount))
             self.draw_background()
             self.draw_court(offset)
-            if self.state == "play" and self.serve_timer > 0.9 and sum(self.scores) == 0:
+            if self.state == "play" and self.serve_timer > 0 and sum(self.scores) == 0:
                 hint = self.t("controls_2p") if self.two_players else self.t("controls_1p")
+                # a dark plate so the net's dashes don't cut through the text
+                plate = pygame.Rect(0, 0, 440, 64)
+                plate.center = (WIDTH // 2, HEIGHT // 2 + 53)
+                pygame.draw.rect(self.screen, BG, plate, border_radius=10)
+                pygame.draw.rect(self.screen, GRID, plate, 1, border_radius=10)
                 self.text(hint, "small", WHITE, (WIDTH // 2, HEIGHT // 2 + 40))
                 self.text(self.t("first_to", n=WIN_SCORE), "small", DIM, (WIDTH // 2, HEIGHT // 2 + 66))
             if self.state == "pause":

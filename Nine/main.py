@@ -73,8 +73,7 @@ TEXT = {
         "too_few": "Escribe al menos 17 números — un sudoku con menos no puede tener solución única.",
         "hint_used": "Pista: casilla revelada.",
         "no_cell": "No quedan casillas vacías.",
-        "keys": "1–9 escribir · 0 borrar · L idioma\nH pista · V verificar · S resolver",
-        "generating": "Generando…",
+        "keys": "1–9 escribir · 0 borrar · N nuevo · L idioma\nH pista · V verificar · S resolver",
     },
     "en": {
         "tagline": "Play or solve any sudoku",
@@ -99,8 +98,7 @@ TEXT = {
         "too_few": "Enter at least 17 numbers — a sudoku with fewer can't have a unique solution.",
         "hint_used": "Hint: cell revealed.",
         "no_cell": "No empty cells left.",
-        "keys": "1–9 write · 0 erase · L language\nH hint · V check · S solve",
-        "generating": "Generating…",
+        "keys": "1–9 write · 0 erase · N new · L language\nH hint · V check · S solve",
     },
 }
 
@@ -162,28 +160,40 @@ class App:
         }
         self.save = load_save()
         self.lang = self.save.get("lang") if self.save.get("lang") in TEXT else "es"
-        self.best_times = self.save.get("best_times", {})
+        best = self.save.get("best_times", {})
+        self.best_times = {
+            k: v for k, v in best.items() if k in DIFFICULTIES and isinstance(v, (int, float)) and v > 0
+        } if isinstance(best, dict) else {}
         self.selected = 40
         self.solver = None
         self.solver_steps = 0
-        self.message = ""
+        self.message = ("welcome", {})
         self.message_color = MUTED
         self.build_buttons()
         self.new_puzzle(self.save.get("difficulty", "easy") if self.save.get("difficulty") in DIFFICULTIES else "easy")
-        self.flash(self.t("welcome"))
+        self.flash("welcome")
 
     # ---------- helpers ----------
     def t(self, key, **kwargs):
         value = TEXT[self.lang][key]
+        if "steps" in kwargs:
+            kwargs["steps"] = fmt_int(kwargs["steps"], self.lang)
         return value.format(**kwargs) if kwargs else value
 
     def persist(self):
         self.save.update({"lang": self.lang, "best_times": self.best_times, "difficulty": self.difficulty})
         write_save(self.save)
 
-    def flash(self, text, color=MUTED):
-        self.message = text
+    def flash(self, key, color=MUTED, **kwargs):
+        """Show a status message; kept as a key so it follows language changes."""
+        self.message = (key, kwargs)
         self.message_color = color
+
+    def message_text(self):
+        key, kwargs = self.message
+        # levels are stored as keys too, so they get translated at draw time
+        kwargs = {k: self.t(v) if k == "level" else v for k, v in kwargs.items()}
+        return self.t(key, **kwargs)
 
     def build_buttons(self):
         w = WIDTH - PANEL_X - 40
@@ -220,20 +230,26 @@ class App:
         puzzle, solution = sudoku.generate(difficulty)
         self.load_board(puzzle, solution, "play")
         self.selected = next((i for i in range(81) if not puzzle[i]), 0)
-        self.flash(self.t("mode_play", level=self.t(difficulty)))
+        self.flash("mode_play", level=difficulty)
         self.persist()
 
-    def custom_board(self):
-        self.load_board([0] * 81, None, "custom")
-        self.selected = 0
-        self.flash(self.t("mode_custom"))
+    def custom_board(self, board=None):
+        self.load_board(board or [0] * 81, None, "custom")
+        self.givens = set()  # everything typed in custom mode stays editable
+        self.custom_input = list(self.board)
+        if board is None:
+            self.selected = 0
+        self.flash("mode_custom")
 
     def reset(self):
         if self.mode == "custom":
-            self.custom_board()
+            # after a solve, Reset brings back the puzzle you typed; pressed again, it clears the grid
+            typed = getattr(self, "custom_input", None)
+            restore = typed if typed and any(typed) and self.board != typed else None
+            self.custom_board(restore)
         else:
             self.load_board(self.puzzle, self.solution, "play")
-            self.flash(self.t("mode_play", level=self.t(self.difficulty)))
+            self.flash("mode_play", level=self.difficulty)
 
     def elapsed(self):
         end = self.finished_time if self.finished_time is not None else time.monotonic()
@@ -246,6 +262,8 @@ class App:
     def write(self, value):
         i = self.selected
         if self.solver or self.finished_time is not None or self.is_locked(i):
+            return
+        if self.board[i] == value:
             return
         self.board[i] = value
         self.wrong.discard(i)
@@ -265,9 +283,9 @@ class App:
         if not self.hinted and (best is None or took < best):
             self.best_times[level] = round(took, 1)
             self.persist()
-            self.flash(self.t("won_record", time=fmt_time(took), level=self.t(level)), USER)
+            self.flash("won_record", USER, time=fmt_time(took), level=level)
         else:
-            self.flash(self.t("won", time=fmt_time(took)), USER)
+            self.flash("won", USER, time=fmt_time(took))
 
     def hint(self):
         if self.solver or self.finished_time is not None:
@@ -275,24 +293,24 @@ class App:
         solution = self.solution
         if self.mode == "custom":
             if sudoku.conflicts(self.board):
-                self.flash(self.t("conflict"), CORAL)
+                self.flash("conflict", CORAL)
                 return
             solution = sudoku.solve(self.board)
             if solution is None:
-                self.flash(self.t("no_solution"), CORAL)
+                self.flash("no_solution", CORAL)
                 return
         i = self.selected
         if self.board[i] == solution[i] and self.board[i]:
             # selected cell is already right — reveal the first empty or wrong one instead
             i = next((k for k in range(81) if self.board[k] != solution[k]), None)
             if i is None:
-                self.flash(self.t("no_cell"))
+                self.flash("no_cell")
                 return
         self.board[i] = solution[i]
         self.hinted.add(i)
         self.wrong.discard(i)
         self.selected = i
-        self.flash(self.t("hint_used"), SOLVER)
+        self.flash("hint_used", SOLVER)
         if self.mode == "play":
             self.check_win()
 
@@ -301,28 +319,29 @@ class App:
             bad = sudoku.conflicts(self.board)
             if bad:
                 self.wrong = bad
-                self.flash(self.t("conflict"), CORAL)
+                self.flash("conflict", CORAL)
             else:
-                self.flash(self.t("check_ok"), USER)
+                self.flash("check_ok", USER)
             return
         self.wrong = {i for i in range(81) if self.board[i] and self.board[i] != self.solution[i]}
         if self.wrong:
             n = len(self.wrong)
-            self.flash(self.t("check_bad_one") if n == 1 else self.t("check_bad", n=n), CORAL)
+            self.flash("check_bad_one" if n == 1 else "check_bad", CORAL, n=n)
         else:
-            self.flash(self.t("check_ok"), USER)
+            self.flash("check_ok", USER)
 
     def start_solver(self):
         if self.solver or self.finished_time is not None:
             return
         base = list(self.board) if self.mode == "custom" else list(self.puzzle)
         if self.mode == "custom":
+            self.custom_input = list(base)
             if sudoku.conflicts(base):
                 self.wrong = sudoku.conflicts(base)
-                self.flash(self.t("conflict"), CORAL)
+                self.flash("conflict", CORAL)
                 return
             if 81 - base.count(0) < 17:
-                self.flash(self.t("too_few"), CORAL)
+                self.flash("too_few", CORAL)
                 return
             self.multiple = sudoku.count_solutions(base) > 1
         else:
@@ -353,12 +372,14 @@ class App:
                 self.solver_cells = {k for k in range(81) if k not in self.solver_base}
                 self.solver = None
                 self.finished_time = time.monotonic()
-                steps = fmt_int(self.solver_steps, self.lang)
-                self.flash(self.t("multiple") if self.multiple else self.t("solved", steps=steps), SOLVER)
+                if self.multiple:
+                    self.flash("multiple", SOLVER)
+                else:
+                    self.flash("solved", SOLVER, steps=self.solver_steps)
                 return
             else:
                 self.solver = None
-                self.flash(self.t("no_solution"), CORAL)
+                self.flash("no_solution", CORAL)
                 return
 
     def finish_solver(self):
@@ -371,7 +392,6 @@ class App:
         if key == pygame.K_l:
             self.lang = "en" if self.lang == "es" else "es"
             self.persist()
-            self.flash(self.t("mode_play", level=self.t(self.difficulty)) if self.mode == "play" else self.t("mode_custom"))
             return
         if self.solver:
             if key in (pygame.K_SPACE, pygame.K_ESCAPE, pygame.K_RETURN):
@@ -438,7 +458,13 @@ class App:
             if i == sel:
                 fill = SELECTED
             if fill:
-                pygame.draw.rect(self.screen, fill, rect)
+                corners = {
+                    "border_top_left_radius": 10 if i == 0 else 0,
+                    "border_top_right_radius": 10 if i == 8 else 0,
+                    "border_bottom_left_radius": 10 if i == 72 else 0,
+                    "border_bottom_right_radius": 10 if i == 80 else 0,
+                }
+                pygame.draw.rect(self.screen, fill, rect, **corners)
 
             v = self.board[i]
             if v:
@@ -463,7 +489,8 @@ class App:
 
     def draw_button(self, b, mouse):
         hover = b.rect.collidepoint(mouse)
-        active_level = b.kind == "level" and self.mode == "play" and self.difficulty == b.key
+        active_level = (b.kind == "level" and self.mode == "play" and self.difficulty == b.key) or (
+            b.key == "own" and self.mode == "custom")
         if b.kind == "primary":
             bg, fg, border = (USER if not hover else (38, 105, 91)), WHITE, None
         elif active_level:
@@ -516,7 +543,7 @@ class App:
             self.screen.blit(self.fonts["small"].render(label.upper(), True, MUTED), (x, stats_y))
             self.screen.blit(self.fonts["mid"].render(value, True, THICK), (x, stats_y + 18))
 
-        message = self.t("solving", steps=fmt_int(self.solver_steps, self.lang)) if self.solver else self.message
+        message = self.t("solving", steps=self.solver_steps) if self.solver else self.message_text()
         color = SOLVER if self.solver else self.message_color
         self.draw_wrapped(message, color, PANEL_X, 532, w)
         for k, line in enumerate(self.t("keys").split("\n")):
