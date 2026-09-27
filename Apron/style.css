@@ -70,6 +70,7 @@ body {
 
 .add-btn { flex: 1; background: linear-gradient(135deg, #a83232, #7a1f1f); color: white; border: none; padding: 7px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: filter 0.2s; }
 .add-btn:hover { filter: brightness(1.08); }
+.add-btn.added { background: linear-gradient(135deg, #3d5c3d, #274227); }
 
 .order-type-zone { margin-bottom: 18px; }
 .order-type-title { font-size: 12px; font-weight: 700; color: #2e2018; margin-bottom: 10px; }
@@ -85,12 +86,19 @@ body {
 .cart-row { display: flex; align-items: center; gap: 10px; background: #eef2e4; border-left: 4px solid #3d5c3d; border-radius: 10px; padding: 10px 12px; }
 .cart-emoji { font-size: 18px; }
 .cart-name { flex: 1; font-size: 13px; font-weight: 600; color: #33402a; }
-.cart-qty { font-size: 11px; color: #6b7a5a; background:#e3ead2; padding:2px 7px; border-radius: 8px; }
-.cart-price { font-size: 14px; font-weight: 700; color: #3d5c3d; min-width: 55px; text-align: right; }
+.cart-stepper { display: inline-flex; align-items: center; background: #e3ead2; border-radius: 8px; overflow: hidden; }
+.cart-step { background: transparent; border: none; color: #3d5c3d; width: 22px; height: 22px; font-weight: 700; font-size: 13px; cursor: pointer; }
+.cart-step:hover { background: #d4dec0; }
+.cart-qty { font-size: 11.5px; font-weight: 700; color: #33402a; min-width: 18px; text-align: center; }
+.cart-price { font-size: 14px; font-weight: 700; color: #3d5c3d; min-width: 64px; text-align: right; font-variant-numeric: tabular-nums; }
 .del-btn { background: #e8c9a0; color: #8c2f2f; border: none; width: 22px; height:22px; border-radius: 50%; cursor: pointer; font-weight: 700; font-size: 12px; }
 .del-btn:hover { background: #ddb98a; }
 
 .empty { text-align: center; padding: 30px; color: #a6957a; font-size: 13px; }
+
+.cart-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; background: #a83232; color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 11.5px; font-weight: 700; }
+
+button:focus-visible { outline: 2px solid #c9a227; outline-offset: 2px; }
 
 .checkout-zone { margin: 18px 0; padding-bottom: 16px; border-bottom: 2px dashed #e3cfa3; }
 .checkout-title { font-size: 12px; font-weight: 700; color: #2e2018; margin-bottom: 10px; }
@@ -120,12 +128,12 @@ body {
 
 .bill-lines { border-top: 2px dashed #e3cfa3; padding-top: 14px; margin-top: 6px; }
 .bill-line { display:flex; justify-content: space-between; font-size: 13px; color: #5c4a3a; padding: 5px 0; }
-.bill-line b { color: #3d5c3d; }
+.bill-line b { color: #3d5c3d; font-variant-numeric: tabular-nums; }
 .bill-line.delivery-fee b { color: #a83232; }
 
 .total-box { background: linear-gradient(135deg, #3d5c3d, #274227); border-radius: 12px; padding: 16px; margin-top: 14px; text-align: center; color: white; }
 .total-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.85; }
-.total-amount { font-size: 28px; font-weight: 800; margin-top: 4px; }
+.total-amount { font-size: 28px; font-weight: 800; margin-top: 4px; font-variant-numeric: tabular-nums; }
 
 .confirm-btn { width: 100%; padding: 13px; margin-top: 14px; background: linear-gradient(135deg, #3d5c3d, #274227); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13.5px; transition: transform 0.2s; box-shadow: 0 10px 22px rgba(61,92,61,0.3); }
 .confirm-btn:hover { transform: translateY(-2px); }
@@ -149,6 +157,7 @@ body {
 .modal-section-title { font-size: 10.5px; font-weight: 700; color: #a87d3f; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
 .modal-row { display: flex; justify-content: space-between; font-size: 12.5px; color: #2e2018; padding: 3px 0; }
 .modal-row span:first-child { color: #5c4a3a; }
+.modal-row span:last-child { text-align: right; overflow-wrap: anywhere; padding-left: 12px; }
 .modal-eta { display: flex; align-items: center; gap: 8px; background: #eef2e4; border-radius: 10px; padding: 10px 12px; font-size: 12.5px; color: #33402a; margin-bottom: 16px; }
 .modal-eta .ico { font-size: 18px; }
 .new-order-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #a83232, #7a1f1f); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; }

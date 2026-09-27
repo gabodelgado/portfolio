@@ -1,32 +1,32 @@
-const FALLBACK_RATES = {
-    USD:1, EUR:0.9200, GBP:0.7900, JPY:149.50, CHF:0.8800, CAD:1.3600, AUD:1.5200, NZD:1.6600,
-    CNY:7.2400, HKD:7.8000, SGD:1.3400, INR:83.20, KRW:1320, TWD:31.80, THB:34.90, MYR:4.68, IDR:15750, PHP:56.40, VND:24500,
-    PKR:278, BDT:110, LKR:305, NPR:133, MMK:2100, KHR:4100, LAK:21500, MNT:3450,
-    MXN:18.50, BRL:5.15, COP:4050, CLP:940, ARS:990, PEN:3.75, UYU:40.20, VES:850,
-    BOB:6.91, PYG:7300, GTQ:7.75, HNL:24.7, NIO:36.6, CRC:520, PAB:1.00, DOP:59.5, JMD:156, TTD:6.78, BSD:1.00, BBD:2.00,
-    ZAR:18.60, EGP:48.50, NGN:1550, KES:129.50, GHS:15.20, ETB:118, TZS:2600, UGX:3750, ZMW:26.5,
-    MAD:9.95, TND:3.11, DZD:134.5,
-    SEK:10.45, NOK:10.65, DKK:6.86, PLN:4.00, CZK:22.90, HUF:358.50, RON:4.58, RUB:92.30, TRY:34.20,
-    UAH:41.2, BGN:1.80, ISK:138, RSD:107.5, GEL:2.70, AMD:387, AZN:1.70, KZT:445, UZS:12750,
-    AED:3.67, SAR:3.75, ILS:3.68, QAR:3.64, BHD:0.376, KWD:0.307, OMR:0.385, JOD:0.709, LBP:89500, IQD:1310,
-    FJD:2.27
-};
+// Only real rates are shown: live from the API, or the last live rates saved on this device.
+// There are no hardcoded fallback rates — without data the app says so instead of guessing.
+const CURRENCY_CODES = [
+    'USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'CNY', 'HKD', 'SGD', 'INR',
+    'KRW', 'TWD', 'THB', 'MYR', 'IDR', 'PHP', 'VND', 'PKR', 'BDT', 'LKR', 'NPR', 'MMK',
+    'KHR', 'LAK', 'MNT', 'MXN', 'BRL', 'COP', 'CLP', 'ARS', 'PEN', 'UYU', 'VES', 'BOB',
+    'PYG', 'GTQ', 'HNL', 'NIO', 'CRC', 'PAB', 'DOP', 'JMD', 'TTD', 'BSD', 'BBD', 'ZAR',
+    'EGP', 'NGN', 'KES', 'GHS', 'ETB', 'TZS', 'UGX', 'ZMW', 'MAD', 'TND', 'DZD', 'SEK',
+    'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'RUB', 'TRY', 'UAH', 'BGN', 'ISK', 'RSD',
+    'GEL', 'AMD', 'AZN', 'KZT', 'UZS', 'AED', 'SAR', 'ILS', 'QAR', 'BHD', 'KWD', 'OMR',
+    'JOD', 'LBP', 'IQD', 'FJD'
+];
 
-const usdRates = Object.assign({}, FALLBACK_RATES);
+const usdRates = {};
 let ratesAreLive = false;
 let hasRealData = false;
 let isFetching = false;
 let lastUpdated = null;
 
-const RATES_CACHE_KEY = 'currencyExchangeRatesCache';
+const RATES_CACHE_KEY = 'swapRatesCache';
+const OLD_RATES_CACHE_KEY = 'currencyExchangeRatesCache';
 
 function loadCachedRates(){
     try{
-        const raw = localStorage.getItem(RATES_CACHE_KEY);
+        const raw = localStorage.getItem(RATES_CACHE_KEY) || localStorage.getItem(OLD_RATES_CACHE_KEY);
         if(!raw) return false;
         const cached = JSON.parse(raw);
         if(!cached || !cached.rates || !cached.timestamp) return false;
-        Object.keys(FALLBACK_RATES).forEach(function(code){
+        CURRENCY_CODES.forEach(function(code){
             if(typeof cached.rates[code] === 'number'){ usdRates[code] = cached.rates[code]; }
         });
         lastUpdated = new Date(cached.timestamp);
@@ -87,36 +87,121 @@ const names = {
 const symbols = {
     USD:'$', EUR:'€', GBP:'£', JPY:'¥', CHF:'Fr', CAD:'CA$', AUD:'AU$', NZD:'NZ$',
     CNY:'¥', HKD:'HK$', SGD:'S$', INR:'₹', KRW:'₩', TWD:'NT$', THB:'฿', MYR:'RM', IDR:'Rp', PHP:'₱', VND:'₫',
-    PKR:'Rs', BDT:'Tk', LKR:'Rs', NPR:'Rs', MMK:'K', KHR:'CR', LAK:'K', MNT:'T',
+    PKR:'Rs', BDT:'৳', LKR:'Rs', NPR:'Rs', MMK:'K', KHR:'៛', LAK:'₭', MNT:'₮',
     MXN:'MX$', BRL:'R$', COP:'COP$', CLP:'CLP$', ARS:'AR$', PEN:'S/', UYU:'UY$', VES:'Bs.',
-    BOB:'Bs', PYG:'G', GTQ:'Q', HNL:'L', NIO:'C$', CRC:'C', PAB:'B/.', DOP:'RD$', JMD:'J$', TTD:'TT$', BSD:'B$', BBD:'Bds$',
-    ZAR:'R', EGP:'E£', NGN:'₦', KES:'KSh', GHS:'GHS', ETB:'Br', TZS:'TSh', UGX:'USh', ZMW:'ZK',
+    BOB:'Bs', PYG:'₲', GTQ:'Q', HNL:'L', NIO:'C$', CRC:'₡', PAB:'B/.', DOP:'RD$', JMD:'J$', TTD:'TT$', BSD:'B$', BBD:'Bds$',
+    ZAR:'R', EGP:'E£', NGN:'₦', KES:'KSh', GHS:'₵', ETB:'Br', TZS:'TSh', UGX:'USh', ZMW:'ZK',
     MAD:'MAD', TND:'TND', DZD:'DZD',
-    SEK:'kr', NOK:'kr', DKK:'kr', PLN:'zl', CZK:'Kc', HUF:'Ft', RON:'lei', RUB:'RUB', TRY:'TRY',
-    UAH:'UAH', BGN:'BGN', ISK:'ISK', RSD:'RSD', GEL:'GEL', AMD:'AMD', AZN:'AZN', KZT:'KZT', UZS:'UZS',
-    AED:'AED', SAR:'SAR', ILS:'ILS', QAR:'QAR', BHD:'BHD', KWD:'KWD', OMR:'OMR', JOD:'JOD', LBP:'LBP', IQD:'IQD',
+    SEK:'kr', NOK:'kr', DKK:'kr', PLN:'zł', CZK:'Kč', HUF:'Ft', RON:'lei', RUB:'₽', TRY:'₺',
+    UAH:'₴', BGN:'лв', ISK:'ISK', RSD:'RSD', GEL:'₾', AMD:'֏', AZN:'₼', KZT:'₸', UZS:'soʻm',
+    AED:'AED', SAR:'SAR', ILS:'₪', QAR:'QAR', BHD:'BHD', KWD:'KWD', OMR:'OMR', JOD:'JOD', LBP:'LBP', IQD:'IQD',
     FJD:'FJ$'
 };
 
 const i18n = {
     es: { title:'SWAP', subtitle:'Tasas de mercado en tiempo real, sin comisión', live:'TASA EN VIVO',
-        loadingRates:'Actualizando tasas...', offlineRates:'Tasas aproximadas (sin conexión)', cachedRates:'Últimas tasas guardadas (sin conexión)',
+        loadingRates:'Actualizando tasas...', offlineRates:'Sin conexión', cachedRates:'Últimas tasas guardadas (sin conexión)',
         youSend:'Envías', theyReceive:'Reciben', totalReceive:'Total a recibir',
-        noFees:'Sin comisiones · Sin cargos ocultos · Tasa real', updated:'Última actualización:', searchPh:'Buscar...',
+        noFees:'Sin comisiones · Sin cargos ocultos · Tasa real', updated:'Última actualización:', searchPh:'Buscar moneda o país...',
+        noRates:'No pudimos cargar las tasas. Revisa tu conexión y toca ⟳ para reintentar.',
+        noRatesTs:'Aún no hay tasas descargadas en este dispositivo',
+        noResults:'Sin resultados', refresh:'Actualizar tasas', swapLabel:'Intercambiar monedas',
         welcomeTitle:'¿En qué moneda piensas?', welcomeSub:'Elige tu moneda local y la usaremos como punto de partida cada vez que abras la app.',
-        welcomeBtn:'Comenzar →' },
+        welcomeBtn:'Comenzar →', changeHome:'Cambiar moneda local' },
     en: { title:'SWAP', subtitle:'Live mid-market rates, zero markup', live:'LIVE RATES',
-        loadingRates:'Updating rates...', offlineRates:'Approximate rates (offline)', cachedRates:'Last saved rates (offline)',
+        loadingRates:'Updating rates...', offlineRates:'Offline', cachedRates:'Last saved rates (offline)',
         youSend:'You send', theyReceive:'They receive', totalReceive:'Total to receive',
-        noFees:'No fees · No hidden charges · Real exchange rate', updated:'Last updated:', searchPh:'Search...',
+        noFees:'No fees · No hidden charges · Real exchange rate', updated:'Last updated:', searchPh:'Search currency or country...',
+        noRates:'We couldn\'t load the rates. Check your connection and tap ⟳ to retry.',
+        noRatesTs:'No rates downloaded on this device yet',
+        noResults:'No results', refresh:'Refresh rates', swapLabel:'Swap currencies',
         welcomeTitle:'What\'s your home currency?', welcomeSub:'Pick your local currency and we\'ll use it as your starting point every time you open the app.',
-        welcomeBtn:'Get started →' }
+        welcomeBtn:'Get started →', changeHome:'Change home currency' }
 };
 let currentLang = 'es';
 let fromValue = 'USD';
 let toValue = 'EUR';
 let homeSelection = 'USD';
-const currencyCodes = Object.keys(FALLBACK_RATES);
+const currencyCodes = CURRENCY_CODES;
+
+const LANG_KEY = 'swapLang';
+
+// Numbers always get thousands separators: 1.000,50 in Spanish · 1,000.50 in English
+function numSeps(lang){
+    return (lang || currentLang) === 'es' ? { group:'.', dec:',' } : { group:',', dec:'.' };
+}
+
+function fmt(n, decimals){
+    if(decimals === undefined) decimals = 2;
+    const s = numSeps();
+    const parts = Math.abs(n).toFixed(decimals).split('.');
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, s.group);
+    const sign = n < 0 && Number(parts.join('.')) !== 0 ? '-' : '';
+    return sign + intPart + (parts[1] ? s.dec + parts[1] : '');
+}
+
+function parseNum(str, lang){
+    if(str === undefined || str === null || str === '') return NaN;
+    const s = numSeps(lang);
+    return parseFloat(String(str).split(s.group).join('').replace(s.dec, '.'));
+}
+
+// How many decimals a currency really uses (JPY/KRW/CLP: 0, USD/EUR: 2, KWD/BHD: 3)
+function currencyDigits(code){
+    try{ return new Intl.NumberFormat('en', {style:'currency', currency:code}).resolvedOptions().maximumFractionDigits; }
+    catch(err){ return 2; }
+}
+
+function money(n, code){
+    const sym = symbols[code];
+    const space = /[A-Za-zÀ-ÿЀ-ӿ]$/.test(sym) ? ' ' : '';
+    return sym + space + fmt(n, currencyDigits(code));
+}
+
+// Small rates (e.g. 1 IDR = 0.0000634 USD) keep enough significant digits to be useful
+function formatRate(rate){
+    if(rate >= 1) return fmt(rate, 4);
+    const decimals = Math.min(Math.max(4, -Math.floor(Math.log10(rate)) + 3), 10);
+    return fmt(rate, decimals);
+}
+
+// Live-format a money input while typing, keeping the caret where the user expects it.
+// A typed "." or "," is always treated as the decimal key; thousands separators are inserted automatically.
+function formatMoneyInput(e, maxDecimals){
+    const input = e.target;
+    const s = numSeps();
+    let v = input.value;
+    const caret = input.selectionStart;
+    if(e.data === '.' || e.data === ','){ v = v.slice(0, caret - 1) + s.dec + v.slice(caret); }
+
+    let digits = '', seenDec = false, sigBeforeCaret = 0;
+    for(let i = 0; i < v.length; i++){
+        const ch = v[i];
+        const keep = (ch >= '0' && ch <= '9') || (ch === s.dec && !seenDec && maxDecimals > 0);
+        if(ch === s.dec && keep) seenDec = true;
+        if(keep){ digits += ch; if(i < caret) sigBeforeCaret++; }
+    }
+
+    const split = digits.split(s.dec);
+    let intPart = split[0];
+    if(intPart === '' && seenDec){ intPart = '0'; sigBeforeCaret++; }
+    const fracPart = seenDec ? (split[1] || '').slice(0, maxDecimals) : '';
+    const result = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, s.group) + (seenDec ? s.dec + fracPart : '');
+
+    let pos = 0, count = 0;
+    while(pos < result.length && count < sigBeforeCaret){
+        if(result[pos] !== s.group) count++;
+        pos++;
+    }
+    input.value = result;
+    input.setSelectionRange(pos, pos);
+}
+
+function toInputValue(n){
+    if(n === null || isNaN(n)) return '';
+    const cents = Math.round(n * 100);
+    return fmt(n, cents % 100 === 0 ? 0 : (cents % 10 === 0 ? 1 : 2));
+}
 
 function sortedCodes(){
     return [...currencyCodes].sort(function(a,b){
@@ -125,9 +210,10 @@ function sortedCodes(){
 }
 
 function itemsHtml(codes, which){
-    if(codes.length === 0) return '<div class="ccy-empty">—</div>';
-    return codes.map(function(code){
-        return '<div class="ccy-item" onclick="selectCurrency(\'' + which + '\',\'' + code + '\')">' +
+    if(codes.length === 0) return '<div class="ccy-empty">' + i18n[currentLang].noResults + '</div>';
+    const selected = which === 'from' ? fromValue : (which === 'to' ? toValue : homeSelection);
+    return codes.map(function(code, idx){
+        return '<div class="ccy-item' + (code === selected ? ' selected' : '') + (idx === 0 ? ' highlighted' : '') + '" data-code="' + code + '" onclick="selectCurrency(\'' + which + '\',\'' + code + '\')">' +
             '<span class="flag">' + flags[code] + '</span>' +
             '<span class="code">' + code + '</span>' +
             '<span class="name">' + names[currentLang][code] + '</span></div>';
@@ -138,25 +224,56 @@ function buildList(which){
     document.getElementById(which + 'List').innerHTML = itemsHtml(sortedCodes(), which);
 }
 
+// Accent-insensitive search: "dolar" finds "Dólar", "yen" finds "Yen Japonés"
+function normalize(str){
+    return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
 function filterList(which){
-    const query = document.getElementById(which + 'Search').value.toLowerCase();
+    const query = normalize(document.getElementById(which + 'Search').value.trim());
     const codes = sortedCodes().filter(function(code){
-        return code.toLowerCase().indexOf(query) !== -1 || names[currentLang][code].toLowerCase().indexOf(query) !== -1;
+        return normalize(code).indexOf(query) !== -1 ||
+            normalize(names.es[code]).indexOf(query) !== -1 ||
+            normalize(names.en[code]).indexOf(query) !== -1;
     });
     document.getElementById(which + 'List').innerHTML = itemsHtml(codes, which);
+}
+
+function closeAllDropdowns(){
+    ['from','to','home'].forEach(function(w){ document.getElementById(w + 'Panel').classList.remove('open'); });
 }
 
 function toggleDropdown(which){
     const panel = document.getElementById(which + 'Panel');
     const isOpen = panel.classList.contains('open');
-    document.getElementById('fromPanel').classList.remove('open');
-    document.getElementById('toPanel').classList.remove('open');
-    document.getElementById('homePanel').classList.remove('open');
+    closeAllDropdowns();
     if(!isOpen){
         panel.classList.add('open');
-        buildList(which);
         document.getElementById(which + 'Search').value = '';
+        buildList(which);
+        const sel = panel.querySelector('.ccy-item.selected');
+        if(sel) sel.scrollIntoView({block:'nearest'});
         setTimeout(function(){ document.getElementById(which + 'Search').focus(); }, 50);
+    }
+}
+
+// Keyboard: ↑/↓ move, Enter picks, Esc closes
+function onSearchKey(e, which){
+    const list = document.getElementById(which + 'List');
+    const items = Array.from(list.querySelectorAll('.ccy-item'));
+    let idx = items.findIndex(function(el){ return el.classList.contains('highlighted'); });
+    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+        e.preventDefault();
+        if(!items.length) return;
+        if(idx !== -1) items[idx].classList.remove('highlighted');
+        idx = e.key === 'ArrowDown' ? Math.min(idx + 1, items.length - 1) : Math.max(idx - 1, 0);
+        items[idx].classList.add('highlighted');
+        items[idx].scrollIntoView({block:'nearest'});
+    } else if(e.key === 'Enter'){
+        e.preventDefault();
+        if(idx !== -1) selectCurrency(which, items[idx].getAttribute('data-code'));
+    } else if(e.key === 'Escape'){
+        closeAllDropdowns();
     }
 }
 
@@ -172,9 +289,16 @@ function updateTriggers(){
 }
 
 function selectCurrency(which, code){
-    if(which === 'from'){ fromValue = code; }
-    else if(which === 'to'){ toValue = code; }
-    else { homeSelection = code; }
+    // Picking the currency already on the other side just flips them
+    if(which === 'from'){
+        if(code === toValue) toValue = fromValue;
+        fromValue = code;
+    } else if(which === 'to'){
+        if(code === fromValue) fromValue = toValue;
+        toValue = code;
+    } else {
+        homeSelection = code;
+    }
     updateTriggers();
     document.getElementById(which + 'Panel').classList.remove('open');
     if(which !== 'home') calculate();
@@ -186,19 +310,30 @@ document.addEventListener('click', function(e){
     if(!e.target.closest('#homeDropdown')){ document.getElementById('homePanel').classList.remove('open'); }
 });
 
+document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') closeAllDropdowns();
+});
+
 const amountInput = document.getElementById('amount');
 
 function getRate(from, to){ return usdRates[to] / usdRates[from]; }
 
 function calculate(){
-    let amount = parseFloat(amountInput.value);
-    if (isNaN(amount) || amount < 0) { amount = 0; amountInput.value = ''; }
+    const t = i18n[currentLang];
+    if(!hasRealData || !usdRates[fromValue] || !usdRates[toValue]){
+        document.getElementById('convertedDisplay').value = '—';
+        document.getElementById('rateInfo').textContent = isFetching ? t.loadingRates : t.noRates;
+        document.getElementById('finalResult').textContent = '—';
+        return;
+    }
+    let amount = parseNum(amountInput.value);
+    if(isNaN(amount) || amount < 0) amount = 0;
     const rate = getRate(fromValue, toValue);
     const converted = amount * rate;
 
-    document.getElementById('convertedDisplay').value = converted.toLocaleString('es-ES',{minimumFractionDigits:2, maximumFractionDigits:2});
-    document.getElementById('rateInfo').innerHTML = '1 ' + fromValue + ' = <span>' + rate.toLocaleString('es-ES',{minimumFractionDigits:2, maximumFractionDigits:4}) + ' ' + toValue + '</span>';
-    document.getElementById('finalResult').textContent = symbols[toValue] + converted.toLocaleString('es-ES',{minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('convertedDisplay').value = fmt(converted, currencyDigits(toValue));
+    document.getElementById('rateInfo').innerHTML = '1 ' + fromValue + ' = <span>' + formatRate(rate) + ' ' + toValue + '</span>';
+    document.getElementById('finalResult').textContent = money(converted, toValue);
 }
 
 function swapCurrencies(){
@@ -211,12 +346,11 @@ function swapCurrencies(){
 
 function updateTimestamp(){
     const locale = currentLang === 'es' ? 'es-ES' : 'en-US';
-    const label = i18n[currentLang].updated;
+    const el = document.getElementById('timestamp');
     if(lastUpdated){
-        document.getElementById('timestamp').textContent = label + ' ' + lastUpdated.toLocaleString(locale,{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+        el.textContent = i18n[currentLang].updated + ' ' + lastUpdated.toLocaleString(locale,{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
     } else {
-        const today = new Date();
-        document.getElementById('timestamp').textContent = label + ' ' + today.toLocaleDateString(locale,{day:'numeric',month:'long',year:'numeric'});
+        el.textContent = isFetching ? '' : i18n[currentLang].noRatesTs;
     }
 }
 
@@ -242,12 +376,14 @@ async function fetchLiveRates(){
     if(isFetching) return;
     isFetching = true;
     updateLiveBadge('loading');
+    document.getElementById('refreshBtn').classList.add('spinning');
+    if(!hasRealData) calculate();
     try{
         const res = await fetch('https://open.er-api.com/v6/latest/USD');
         if(!res.ok) throw new Error('network response not ok');
         const data = await res.json();
         if(data.result !== 'success') throw new Error('api result not success');
-        Object.keys(FALLBACK_RATES).forEach(function(code){
+        CURRENCY_CODES.forEach(function(code){
             if(typeof data.rates[code] === 'number'){ usdRates[code] = data.rates[code]; }
         });
         lastUpdated = new Date(data.time_last_update_unix * 1000);
@@ -260,59 +396,98 @@ async function fetchLiveRates(){
         updateLiveBadge(hasRealData ? 'cached' : 'offline');
     }
     isFetching = false;
+    document.getElementById('refreshBtn').classList.remove('spinning');
     updateTimestamp();
     calculate();
+}
+
+function applyLang(lang){
+    currentLang = lang;
+    document.documentElement.lang = lang;
+    ['langEs','welcomeLangEs'].forEach(function(id){ document.getElementById(id).classList.toggle('active', lang==='es'); });
+    ['langEn','welcomeLangEn'].forEach(function(id){ document.getElementById(id).classList.toggle('active', lang==='en'); });
+    document.querySelectorAll('[data-i18n]').forEach(function(el){ el.textContent = i18n[lang][el.getAttribute('data-i18n')]; });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function(el){
+        el.setAttribute('aria-label', i18n[lang][el.getAttribute('data-i18n-aria')]);
+        el.title = i18n[lang][el.getAttribute('data-i18n-aria')];
+    });
+    ['fromSearch','toSearch','homeSearch'].forEach(function(id){ document.getElementById(id).placeholder = i18n[lang].searchPh; });
 }
 
 function setLang(lang){
-    currentLang = lang;
-    document.getElementById('langEs').classList.toggle('active', lang==='es');
-    document.getElementById('langEn').classList.toggle('active', lang==='en');
-    document.getElementById('welcomeLangEs').classList.toggle('active', lang==='es');
-    document.getElementById('welcomeLangEn').classList.toggle('active', lang==='en');
-    document.querySelectorAll('[data-i18n]').forEach(function(el){ el.textContent = i18n[lang][el.getAttribute('data-i18n')]; });
-    document.getElementById('fromSearch').placeholder = i18n[lang].searchPh;
-    document.getElementById('toSearch').placeholder = i18n[lang].searchPh;
-    document.getElementById('homeSearch').placeholder = i18n[lang].searchPh;
+    const prevLang = currentLang;
+    const amount = parseNum(amountInput.value, prevLang);
+    applyLang(lang);
+    amountInput.value = toInputValue(amount);
+    try{ localStorage.setItem(LANG_KEY, lang); } catch(err){ /* ignore */ }
+    ['from','to','home'].forEach(function(w){
+        if(document.getElementById(w + 'Panel').classList.contains('open')) filterList(w);
+    });
     updateTriggers();
-    updateLiveBadge(ratesAreLive ? 'live' : (hasRealData ? 'cached' : 'offline'));
+    updateLiveBadge(isFetching ? 'loading' : (ratesAreLive ? 'live' : (hasRealData ? 'cached' : 'offline')));
     updateTimestamp();
     calculate();
 }
 
-amountInput.addEventListener('input', function(){
-    if (amountInput.value < 0) amountInput.value = 0;
+amountInput.addEventListener('input', function(e){
+    formatMoneyInput(e, currencyDigits(fromValue));
     calculate();
 });
 
+amountInput.addEventListener('blur', function(){
+    const n = parseNum(amountInput.value);
+    amountInput.value = isNaN(n) ? '' : toInputValue(n);
+});
+
 const HOME_CCY_KEY = 'swapHomeCurrency';
+
+function showMain(){
+    document.getElementById('welcomeCard').classList.add('hidden');
+    document.getElementById('mainCard').classList.remove('hidden');
+}
 
 function startSwap(){
     fromValue = homeSelection;
     toValue = homeSelection === 'EUR' ? 'USD' : 'EUR';
     try{ localStorage.setItem(HOME_CCY_KEY, homeSelection); } catch(err){ /* ignore */ }
-    document.getElementById('welcomeCard').classList.add('hidden');
-    document.getElementById('mainCard').classList.remove('hidden');
+    showMain();
     updateTriggers();
     calculate();
+    amountInput.focus();
+    amountInput.select();
+}
+
+function changeHomeCurrency(){
+    homeSelection = fromValue;
+    updateTriggers();
+    document.getElementById('mainCard').classList.add('hidden');
+    document.getElementById('welcomeCard').classList.remove('hidden');
 }
 
 function initHomeCurrency(){
     let saved = null;
     try{ saved = localStorage.getItem(HOME_CCY_KEY); } catch(err){ /* ignore */ }
-    if(saved && FALLBACK_RATES[saved] !== undefined){
+    if(saved && CURRENCY_CODES.indexOf(saved) !== -1){
+        homeSelection = saved;
         fromValue = saved;
         toValue = saved === 'EUR' ? 'USD' : 'EUR';
-        document.getElementById('welcomeCard').classList.add('hidden');
-        document.getElementById('mainCard').classList.remove('hidden');
+        showMain();
     }
 }
 
-updateTriggers();
+function initLang(){
+    let saved = null;
+    try{ saved = localStorage.getItem(LANG_KEY); } catch(err){ /* ignore */ }
+    applyLang(saved === 'en' ? 'en' : 'es');
+    amountInput.value = toInputValue(100);
+}
+
+initLang();
 if(loadCachedRates()){
     updateLiveBadge('cached');
 }
 initHomeCurrency();
+updateTriggers();
 calculate();
 updateTimestamp();
 fetchLiveRates();

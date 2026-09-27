@@ -1,6 +1,100 @@
+// Numbers always get thousands separators: 1.000,50 in Spanish · 1,000.50 in English
+function numSeps(lang){
+    return (lang || currentLang) === 'es' ? { group:'.', dec:',' } : { group:',', dec:'.' };
+}
+
 function fmt(n, decimals){
     if(decimals === undefined) decimals = 2;
-    return n.toLocaleString('es-ES', {minimumFractionDigits: decimals, maximumFractionDigits: decimals});
+    const s = numSeps();
+    const parts = Math.abs(n).toFixed(decimals).split('.');
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, s.group);
+    const sign = n < 0 && Number(parts.join('.')) !== 0 ? '-' : '';
+    return sign + intPart + (parts[1] ? s.dec + parts[1] : '');
+}
+
+// -$1.250,00 instead of $-1.250,00, and "AED 1.250,00" gets a space after letter symbols
+function money(n, sym, decimals){
+    const space = /[A-Za-z]$/.test(sym) ? ' ' : '';
+    const rounded = Number(Math.abs(n).toFixed(decimals === undefined ? 2 : decimals));
+    return (n < 0 && rounded !== 0 ? '-' : '') + sym + space + fmt(Math.abs(n), decimals);
+}
+
+function parseNum(str, lang){
+    if(str === undefined || str === null || str === '') return NaN;
+    const s = numSeps(lang);
+    return parseFloat(String(str).split(s.group).join('').replace(s.dec, '.'));
+}
+
+// Live-format a number input while typing, keeping the caret where the user expects it.
+// A typed "." or "," is always treated as the decimal key; thousands separators are inserted automatically.
+function formatNumberInput(e, maxDecimals){
+    const input = e.target;
+    const s = numSeps();
+    let v = input.value;
+    const caret = input.selectionStart;
+    if(e.data === '.' || e.data === ','){ v = v.slice(0, caret - 1) + s.dec + v.slice(caret); }
+
+    let digits = '', seenDec = false, sigBeforeCaret = 0;
+    for(let i = 0; i < v.length; i++){
+        const ch = v[i];
+        const keep = (ch >= '0' && ch <= '9') || (ch === s.dec && !seenDec && maxDecimals > 0);
+        if(ch === s.dec && keep) seenDec = true;
+        if(keep){ digits += ch; if(i < caret) sigBeforeCaret++; }
+    }
+
+    const split = digits.split(s.dec);
+    let intPart = split[0];
+    if(intPart === '' && seenDec){ intPart = '0'; sigBeforeCaret++; }
+    const fracPart = seenDec ? (split[1] || '').slice(0, maxDecimals) : '';
+    const result = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, s.group) + (seenDec ? s.dec + fracPart : '');
+
+    let pos = 0, count = 0;
+    while(pos < result.length && count < sigBeforeCaret){
+        if(result[pos] !== s.group) count++;
+        pos++;
+    }
+    input.value = result;
+    input.setSelectionRange(pos, pos);
+}
+
+function toInputValue(n){
+    if(n === null || n === undefined || n === '' || isNaN(n)) return '';
+    const cents = Math.round(n * 100);
+    return fmt(n, cents % 100 === 0 ? 0 : (cents % 10 === 0 ? 1 : 2));
+}
+
+function numVal(id){ return parseNum(document.getElementById(id).value); }
+
+// Every .num-input gets live separators; data-decimals sets how many decimals it accepts (default 2)
+document.addEventListener('input', function(e){
+    if(!e.target.classList || !e.target.classList.contains('num-input')) return;
+    formatNumberInput(e, parseInt(e.target.getAttribute('data-decimals') || '2', 10));
+    const max = e.target.getAttribute('data-max');
+    if(max && (parseNum(e.target.value) || 0) > Number(max)) e.target.value = toInputValue(Number(max));
+}, true);
+
+document.addEventListener('blur', function(e){
+    if(!e.target.classList || !e.target.classList.contains('num-input')) return;
+    e.target.value = toInputValue(parseNum(e.target.value));
+}, true);
+
+// Once the plan is on screen it updates live as you type
+document.addEventListener('input', function(){
+    if(document.getElementById('results').style.display !== 'none') calculate();
+});
+document.addEventListener('change', function(e){
+    if(e.target.tagName === 'SELECT' && document.getElementById('results').style.display !== 'none') calculate();
+});
+
+// "1 año y 3 meses" / "1 year and 3 months"
+function formatDuration(totalMonths){
+    const es = currentLang === 'es';
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
+    const y = years ? years + ' ' + (es ? (years === 1 ? 'año' : 'años') : (years === 1 ? 'year' : 'years')) : '';
+    const m = months ? months + ' ' + (es ? (months === 1 ? 'mes' : 'meses') : (months === 1 ? 'month' : 'months')) : '';
+    if(y && m) return y + (es ? ' y ' : ' and ') + m;
+    return y || m;
 }
 
 // No hardcoded tax rates — the user enters their real tax rate manually.
@@ -114,7 +208,7 @@ const i18n = {
         welcomeNamePh:'Ej: Gabriel', welcomeNameRequired:'Escribe tu nombre', welcomeBtn:'Comenzar →',
         greeting:'Hola, ', editNameTitle:'Cambiar nombre',
         goalTitle:'🎯 ¿Cuánto deseas ahorrar?', goalSub:'Define una meta y una fecha objetivo para ver cuánto necesitas ahorrar por pago (opcional)',
-        goalAmountLabel:'Monto de la meta', goalCurrencyLabel:'Moneda de la meta', goalDateLabel:'Fecha objetivo (opcional)', goalPh:'10000',
+        goalAmountLabel:'Monto de la meta', goalCurrencyNote:'En la misma moneda de tus ingresos', goalDateLabel:'Fecha objetivo (opcional)', goalPh:'10.000',
         incomeTitle:'💵 Tus Ingresos', countryLabel:'País donde vives',
         countryNote:'Selecciona tu país y estado/región para ver avisos de impuestos locales (si aplica) — luego ingresa tu tasa de impuestos real abajo',
         taxNote:'Ingresa tu tasa real (revisa tu recibo de pago o el sitio oficial de impuestos de tu país). No usamos una tasa aproximada automática.',
@@ -130,7 +224,7 @@ const i18n = {
         incomeLegend:'Ingreso', expenseLegend:'Gastos', savingsLegend:'Ahorro',
         goalProgressLabel:'🎯 Progreso hacia tu meta',
         timelineTitle:'🗓️ Proyección de Ahorro',
-        placeholder:'👈 Completa tus ingresos y gastos para ver tu plan financiero personalizado',
+        placeholder:'🧭 Completa tus ingresos y gastos y toca «Calcular Mi Plan» para ver tu plan financiero personalizado',
         rent:'Alquiler', utilities:'Servicios', insurance:'Seguro', food:'Comida', transport:'Transporte', entertainment:'Entretenimiento',
         perWeek:'Por semana', perBiweek:'Por quincena', perMonth:'Por mes', perYear:'Por año', in5:'En 5 años',
         warning:'⚠️ Tus gastos superan tus ingresos. Considera reducir gastos o aumentar tus ingresos.',
@@ -138,8 +232,9 @@ const i18n = {
         goalDatePast:'⚠️ La fecha objetivo ya pasó. Elige una fecha futura.',
         goalNeed:'Para tu meta necesitas ahorrar', goalOnTrack:'✅ Vas bien — tu ahorro actual cubre esta meta.',
         goalShort:'⚠️ Te faltan', goalShortEnd:'por periodo para llegar a tiempo.',
-        goalNoDate:'A este ritmo, alcanzarías tu meta en aproximadamente', goalReached:'✅ ¡Ya alcanzarías tu meta en menos de un mes de ahorro!',
-        perWeekWord:'semana', perBiweekWord:'quincena', perMonthWord:'mes', months:'meses'
+        goalNoDate:'A este ritmo, alcanzarías tu meta en aproximadamente',
+        hourlyPh:'25,00', moneyPh:'0,00', goalReached:'✅ ¡Ya alcanzarías tu meta en menos de un mes de ahorro!',
+        perWeekWord:'semana', perBiweekWord:'quincena', perMonthWord:'mes', every:'cada', removeExpense:'Quitar gasto'
     },
     en: {
         appTitle:'🧭 Waypoint', appSubtitle:'Organize your income and expenses to plan your future',
@@ -147,10 +242,10 @@ const i18n = {
         welcomeNamePh:'E.g: Gabriel', welcomeNameRequired:'Type your name', welcomeBtn:'Get started →',
         greeting:'Hi, ', editNameTitle:'Change name',
         goalTitle:'🎯 How much do you want to save?', goalSub:'Set a goal and target date to see how much you need to save per paycheck (optional)',
-        goalAmountLabel:'Goal amount', goalCurrencyLabel:'Goal currency', goalDateLabel:'Target date (optional)', goalPh:'10000',
+        goalAmountLabel:'Goal amount', goalCurrencyNote:'In the same currency as your income', goalDateLabel:'Target date (optional)', goalPh:'10,000',
         incomeTitle:'💵 Your Income', countryLabel:'Country you live in',
         countryNote:'Select your country and state/region to see local tax notes (if any) — then enter your real tax rate below',
-        taxNote:'Enter your real rate (check your pay stub or your country\'s official tax site). We no longer auto-fill an approximate rate.',
+        taxNote:'Enter your real rate (check your pay stub or your country\'s official tax site). We don\'t auto-fill an approximate rate.',
         currencyLabel:'Currency', hourlyLabel:'Hourly rate', hoursLabel:'Hours per week',
         freqLabel:'Pay frequency', freqNote:'Just tells us when you get paid, hours per week do not change',
         weekly:'Weekly', biweekly:'Bi-weekly', monthly:'Monthly', taxLabel:'Tax rate (%)',
@@ -163,7 +258,7 @@ const i18n = {
         incomeLegend:'Income', expenseLegend:'Expenses', savingsLegend:'Savings',
         goalProgressLabel:'🎯 Progress toward your goal',
         timelineTitle:'🗓️ Savings Projection',
-        placeholder:'👈 Fill in your income and expenses to see your personalized financial plan',
+        placeholder:'🧭 Fill in your income and expenses and tap “Calculate My Plan” to see your personalized financial plan',
         rent:'Rent', utilities:'Utilities', insurance:'Insurance', food:'Food', transport:'Transportation', entertainment:'Entertainment',
         perWeek:'Per week', perBiweek:'Per pay period (biweekly)', perMonth:'Per month', perYear:'Per year', in5:'In 5 years',
         warning:'⚠️ Your expenses exceed your income. Consider reducing expenses or increasing income.',
@@ -171,11 +266,13 @@ const i18n = {
         goalDatePast:'⚠️ The target date has already passed. Pick a future date.',
         goalNeed:'To hit your goal you need to save', goalOnTrack:'✅ You are on track — your current savings covers this goal.',
         goalShort:'⚠️ You are short', goalShortEnd:'per period to make it in time.',
-        goalNoDate:'At this rate, you would reach your goal in approximately', goalReached:'✅ You would already reach your goal in under a month of saving!',
-        perWeekWord:'week', perBiweekWord:'pay period', perMonthWord:'month', months:'months'
+        goalNoDate:'At this rate, you would reach your goal in approximately',
+        hourlyPh:'25.00', moneyPh:'0.00', goalReached:'✅ You would already reach your goal in under a month of saving!',
+        perWeekWord:'week', perBiweekWord:'pay period', perMonthWord:'month', every:'every', removeExpense:'Remove expense'
     }
 };
 let currentLang = 'es';
+let draftRestored = false;
 
 function populateCountries(){
     const sel = document.getElementById('country');
@@ -195,6 +292,10 @@ function updateRegionNote(region){
     }
 }
 
+function syncGoalCurrency(){
+    document.getElementById('goalCcy').textContent = document.getElementById('currency').value;
+}
+
 function onCountryChange(){
     const code = document.getElementById('country').value;
     const country = countries.find(function(c){ return c.code === code; });
@@ -206,6 +307,7 @@ function onCountryChange(){
             currencySel.value = country.currency;
         }
     }
+    syncGoalCurrency();
     if(country && country.regions){
         regionField.style.display = 'block';
         document.getElementById('regionLabel').textContent = currentLang==='es' ? country.regionLabel_es : country.regionLabel_en;
@@ -231,7 +333,12 @@ function onRegionChange(){
 }
 
 function setLang(lang){
+    const prevLang = currentLang;
+    const numInputs = Array.from(document.querySelectorAll('.num-input'));
+    const numValues = numInputs.map(function(el){ return parseNum(el.value, prevLang); });
     currentLang = lang;
+    document.documentElement.lang = lang;
+    numInputs.forEach(function(el, i){ el.value = toInputValue(numValues[i]); });
     document.getElementById('langEs').classList.toggle('active', lang==='es');
     document.getElementById('langEn').classList.toggle('active', lang==='en');
     document.getElementById('welcomeLangEs').classList.toggle('active', lang==='es');
@@ -240,9 +347,10 @@ function setLang(lang){
     document.querySelectorAll('[data-i18n-ph]').forEach(function(el){ el.placeholder = i18n[lang][el.getAttribute('data-i18n-ph')]; });
     document.querySelectorAll('[data-i18n-title]').forEach(function(el){ el.title = i18n[lang][el.getAttribute('data-i18n-title')]; });
     document.querySelectorAll('[data-i18n-val]').forEach(function(el){ el.value = i18n[lang][el.getAttribute('data-i18n-val')]; });
-    document.querySelectorAll('.expense-row input[type=text]:not([data-i18n-val])').forEach(function(el){
-        if(!el.hasAttribute('readonly')) el.placeholder = i18n[lang].expenseName;
+    document.querySelectorAll('.expense-row input[type=text]:not([data-i18n-val]):not(.num-input)').forEach(function(el){
+        el.placeholder = i18n[lang].expenseName;
     });
+    document.querySelectorAll('.remove-x').forEach(function(el){ el.title = i18n[lang].removeExpense; el.setAttribute('aria-label', i18n[lang].removeExpense); });
     const currentCountry = document.getElementById('country').value;
     const currentRegion = document.getElementById('region').value;
     const currentTaxRate = document.getElementById('taxRate').value;
@@ -257,28 +365,40 @@ function setLang(lang){
     refreshGreeting();
     const results = document.getElementById('results');
     if(results.style.display !== 'none') calculate();
+    if(draftRestored) saveDraft();
 }
 
 function addCustomExpense(){
     const container = document.getElementById('variableExpenses');
     const row = document.createElement('div');
     row.className = 'expense-row';
-    row.innerHTML = '<input type="text" placeholder="' + i18n[currentLang].expenseName + '">' +
-        '<input type="number" class="expense-value" placeholder="0.00" min="0">' +
-        '<button class="remove-x" onclick="this.parentElement.remove(); saveDraft();">✕</button>';
+    row.innerHTML = '<input type="text" maxlength="30" placeholder="' + i18n[currentLang].expenseName + '">' +
+        '<input type="text" inputmode="decimal" autocomplete="off" class="expense-value num-input" placeholder="' + i18n[currentLang].moneyPh + '" data-i18n-ph="moneyPh">' +
+        removeBtnHtml();
     container.appendChild(row);
+    row.querySelector('input').focus();
+}
+
+function removeBtnHtml(){
+    return '<button class="remove-x" onclick="removeExpense(this)" title="' + i18n[currentLang].removeExpense + '" aria-label="' + i18n[currentLang].removeExpense + '">✕</button>';
+}
+
+function removeExpense(btn){
+    btn.parentElement.remove();
+    saveDraft();
+    if(document.getElementById('results').style.display !== 'none') calculate();
 }
 
 function calculate(){
     const t = i18n[currentLang];
     const currency = document.getElementById('currency').value;
-    const hourlyRate = Math.max(parseFloat(document.getElementById('hourlyRate').value) || 0, 0);
-    const hoursPerWeek = Math.max(parseFloat(document.getElementById('hoursPerWeek').value) || 0, 0);
-    const otherIncome = Math.max(parseFloat(document.getElementById('otherIncome').value) || 0, 0);
-    const taxRate = Math.min(Math.max(parseFloat(document.getElementById('taxRate').value) || 0, 0), 100);
+    const hourlyRate = Math.max(numVal('hourlyRate') || 0, 0);
+    const hoursPerWeek = Math.min(Math.max(numVal('hoursPerWeek') || 0, 0), 168);
+    const otherIncome = Math.max(numVal('otherIncome') || 0, 0);
+    const taxRate = Math.min(Math.max(numVal('taxRate') || 0, 0), 100);
     const frequency = document.getElementById('payFrequency').value;
-    const savingsGoal = Math.max(parseFloat(document.getElementById('savingsGoal').value) || 0, 0);
-    const goalCurrency = document.getElementById('goalCurrency').value;
+    const savingsGoal = Math.max(numVal('savingsGoal') || 0, 0);
+    const goalCurrency = currency;
     const goalDateStr = document.getElementById('goalDate').value;
 
     const annualGross = hourlyRate * hoursPerWeek * 52;
@@ -287,7 +407,7 @@ function calculate(){
 
     let totalExpenses = 0;
     document.querySelectorAll('.expense-value').forEach(function(inp){
-        totalExpenses += Math.max(parseFloat(inp.value) || 0, 0);
+        totalExpenses += Math.max(parseNum(inp.value) || 0, 0);
     });
 
     const monthlySavings = netMonthly - totalExpenses;
@@ -295,36 +415,38 @@ function calculate(){
     const weeklySavings = monthlySavings * 12 / 52;
     const biweeklySavings = monthlySavings * 12 / 26;
 
-    document.getElementById('annualVal').textContent = currency + fmt(annualGross, 0);
-    document.getElementById('grossVal').textContent = currency + fmt(grossMonthly);
-    document.getElementById('netVal').textContent = currency + fmt(netMonthly);
-    document.getElementById('expenseVal').textContent = currency + fmt(totalExpenses);
-    document.getElementById('savingsVal').textContent = currency + fmt(monthlySavings);
+    document.getElementById('annualVal').textContent = money(annualGross, currency, 0);
+    document.getElementById('grossVal').textContent = money(grossMonthly, currency);
+    document.getElementById('netVal').textContent = money(netMonthly, currency);
+    document.getElementById('expenseVal').textContent = money(totalExpenses, currency);
+    document.getElementById('savingsVal').textContent = money(monthlySavings, currency);
 
     const savingsBox = document.getElementById('savingsBox');
     savingsBox.className = 'stat-box savings';
     if(monthlySavings < 0) savingsBox.classList.add('danger');
+    // Monthly pay has no per-period box, so monthly savings takes the full row
+    if(frequency === 'monthly') savingsBox.classList.add('full');
 
     const periodBox = document.getElementById('periodBox');
     let periodSavingsForFreq = monthlySavings;
     if(frequency === 'weekly'){
         periodBox.style.display = 'block';
         document.getElementById('periodLabel').textContent = t.periodWeekly;
-        document.getElementById('periodVal').textContent = currency + fmt(weeklySavings);
+        document.getElementById('periodVal').textContent = money(weeklySavings, currency);
         periodSavingsForFreq = weeklySavings;
     } else if(frequency === 'biweekly'){
         periodBox.style.display = 'block';
         document.getElementById('periodLabel').textContent = t.periodBiweekly;
-        document.getElementById('periodVal').textContent = currency + fmt(biweeklySavings);
+        document.getElementById('periodVal').textContent = money(biweeklySavings, currency);
         periodSavingsForFreq = biweeklySavings;
     } else {
         periodBox.style.display = 'none';
     }
 
     const maxRef = Math.max(netMonthly, totalExpenses, Math.abs(monthlySavings), 1);
-    document.getElementById('barIncomeVal').textContent = currency + fmt(netMonthly);
-    document.getElementById('barExpenseVal').textContent = currency + fmt(totalExpenses);
-    document.getElementById('barSavingsVal').textContent = currency + fmt(monthlySavings);
+    document.getElementById('barIncomeVal').textContent = money(netMonthly, currency);
+    document.getElementById('barExpenseVal').textContent = money(totalExpenses, currency);
+    document.getElementById('barSavingsVal').textContent = money(monthlySavings, currency);
     document.getElementById('barIncome').style.width = Math.min((netMonthly/maxRef)*100,100) + '%';
     document.getElementById('barExpense').style.width = Math.min((totalExpenses/maxRef)*100,100) + '%';
     document.getElementById('barSavings').style.width = Math.min((Math.max(monthlySavings,0)/maxRef)*100,100) + '%';
@@ -361,13 +483,13 @@ function calculate(){
             const progressPct = periodSavingsForFreq > 0 ? Math.min((periodSavingsForFreq/requiredPerPeriod)*100, 100) : 0;
             document.getElementById('goalProgressFill').style.width = progressPct + '%';
 
-            const needLine = t.goalNeed + ' ' + goalCurrency + fmt(requiredPerPeriod) + ' ' + (currentLang==='es' ? 'cada ' : 'every ') + periodWord + '.';
+            const needLine = t.goalNeed + ' ' + money(requiredPerPeriod, goalCurrency) + ' ' + t.every + ' ' + periodWord + '.';
             if(periodSavingsForFreq >= requiredPerPeriod){
                 goalText.innerHTML = needLine + '<br>' + t.goalOnTrack;
                 goalText.classList.add('ontrack');
             } else {
                 const shortfall = requiredPerPeriod - periodSavingsForFreq;
-                goalText.innerHTML = needLine + '<br>' + t.goalShort + ' ' + goalCurrency + fmt(shortfall) + ' ' + t.goalShortEnd;
+                goalText.innerHTML = needLine + '<br>' + t.goalShort + ' ' + money(shortfall, goalCurrency) + ' ' + t.goalShortEnd;
                 goalText.classList.add('short');
             }
         }
@@ -379,7 +501,7 @@ function calculate(){
         if(monthsToGoal < 1){
             goalText.textContent = t.goalReached;
         } else {
-            goalText.textContent = t.goalNoDate + ' ' + Math.ceil(monthsToGoal) + ' ' + t.months + ' (' + goalCurrency + fmt(savingsGoal, 0) + ')';
+            goalText.textContent = t.goalNoDate + ' ' + formatDuration(Math.ceil(monthsToGoal)) + ' (' + money(savingsGoal, goalCurrency, 0) + ').';
         }
     } else {
         goalBox.style.display = 'none';
@@ -389,13 +511,13 @@ function calculate(){
     if(monthlySavings > 0){
         let rows = '';
         if(frequency === 'weekly'){
-            rows += '<div class="timeline-row"><span class="timeline-period">' + t.perWeek + '</span><span class="timeline-value">' + currency + fmt(weeklySavings) + '</span></div>';
+            rows += '<div class="timeline-row"><span class="timeline-period">' + t.perWeek + '</span><span class="timeline-value">' + money(weeklySavings, currency) + '</span></div>';
         } else if(frequency === 'biweekly'){
-            rows += '<div class="timeline-row"><span class="timeline-period">' + t.perBiweek + '</span><span class="timeline-value">' + currency + fmt(biweeklySavings) + '</span></div>';
+            rows += '<div class="timeline-row"><span class="timeline-period">' + t.perBiweek + '</span><span class="timeline-value">' + money(biweeklySavings, currency) + '</span></div>';
         }
-        rows += '<div class="timeline-row"><span class="timeline-period">' + t.perMonth + '</span><span class="timeline-value">' + currency + fmt(monthlySavings) + '</span></div>';
-        rows += '<div class="timeline-row"><span class="timeline-period">' + t.perYear + '</span><span class="timeline-value">' + currency + fmt(annualSavings) + '</span></div>';
-        rows += '<div class="timeline-row"><span class="timeline-period">' + t.in5 + '</span><span class="timeline-value">' + currency + fmt(annualSavings*5) + '</span></div>';
+        rows += '<div class="timeline-row"><span class="timeline-period">' + t.perMonth + '</span><span class="timeline-value">' + money(monthlySavings, currency) + '</span></div>';
+        rows += '<div class="timeline-row"><span class="timeline-period">' + t.perYear + '</span><span class="timeline-value">' + money(annualSavings, currency) + '</span></div>';
+        rows += '<div class="timeline-row"><span class="timeline-period">' + t.in5 + '</span><span class="timeline-value">' + money(annualSavings*5, currency) + '</span></div>';
         timelineRows.innerHTML = rows;
     } else {
         timelineRows.innerHTML = '<div class="alert-box">' + t.warning + '</div>';
@@ -405,7 +527,12 @@ function calculate(){
     document.getElementById('placeholder').style.display = 'none';
 }
 
-const DRAFT_KEY = 'brujulaFinancieraDraft';
+const DRAFT_KEY = 'waypointDraft';
+const OLD_DRAFT_KEY = 'brujulaFinancieraDraft';
+
+// Drafts store plain numbers ("1250.5") so they survive a language switch; old drafts used the same format
+function draftNum(id){ const n = numVal(id); return isNaN(n) ? '' : String(n); }
+function fromDraftNum(v){ return v === undefined || v === null || v === '' ? '' : toInputValue(Number(v)); }
 
 function escapeHtml(str){
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -413,13 +540,13 @@ function escapeHtml(str){
 
 function saveDraft(){
     try{
-        const fixedValues = Array.from(document.querySelectorAll('#fixedExpenses .expense-value')).map(function(el){ return el.value; });
+        const fixedValues = Array.from(document.querySelectorAll('#fixedExpenses .expense-value')).map(function(el){ const n = parseNum(el.value); return isNaN(n) ? '' : String(n); });
         const variableRows = Array.from(document.querySelectorAll('#variableExpenses .expense-row')).map(function(row){
             const textInput = row.querySelector('input[type=text]');
             return {
                 key: textInput.getAttribute('data-i18n-val'),
                 label: textInput.value,
-                value: row.querySelector('.expense-value').value
+                value: (function(n){ return isNaN(n) ? '' : String(n); })(parseNum(row.querySelector('.expense-value').value))
             };
         });
         const draft = {
@@ -427,14 +554,14 @@ function saveDraft(){
             country: document.getElementById('country').value,
             region: document.getElementById('region').value,
             currency: document.getElementById('currency').value,
-            hourlyRate: document.getElementById('hourlyRate').value,
-            hoursPerWeek: document.getElementById('hoursPerWeek').value,
+            hourlyRate: draftNum('hourlyRate'),
+            hoursPerWeek: draftNum('hoursPerWeek'),
             payFrequency: document.getElementById('payFrequency').value,
-            taxRate: document.getElementById('taxRate').value,
-            otherIncome: document.getElementById('otherIncome').value,
-            savingsGoal: document.getElementById('savingsGoal').value,
-            goalCurrency: document.getElementById('goalCurrency').value,
+            taxRate: draftNum('taxRate'),
+            otherIncome: draftNum('otherIncome'),
+            savingsGoal: draftNum('savingsGoal'),
             goalDate: document.getElementById('goalDate').value,
+            showResults: document.getElementById('results').style.display !== 'none',
             fixedValues: fixedValues,
             variableRows: variableRows
         };
@@ -447,7 +574,7 @@ function saveDraft(){
 function restoreDraft(){
     let draft;
     try{
-        const raw = localStorage.getItem(DRAFT_KEY);
+        const raw = localStorage.getItem(DRAFT_KEY) || localStorage.getItem(OLD_DRAFT_KEY);
         if(!raw) return;
         draft = JSON.parse(raw);
     } catch(err){
@@ -466,18 +593,18 @@ function restoreDraft(){
         onRegionChange();
     }
     if(draft.currency) document.getElementById('currency').value = draft.currency;
-    document.getElementById('hourlyRate').value = draft.hourlyRate || '';
-    document.getElementById('hoursPerWeek').value = draft.hoursPerWeek || '';
+    syncGoalCurrency();
+    document.getElementById('hourlyRate').value = fromDraftNum(draft.hourlyRate);
+    document.getElementById('hoursPerWeek').value = fromDraftNum(draft.hoursPerWeek);
     if(draft.payFrequency) document.getElementById('payFrequency').value = draft.payFrequency;
-    document.getElementById('taxRate').value = draft.taxRate || '';
-    document.getElementById('otherIncome').value = draft.otherIncome || '';
-    document.getElementById('savingsGoal').value = draft.savingsGoal || '';
-    if(draft.goalCurrency) document.getElementById('goalCurrency').value = draft.goalCurrency;
+    document.getElementById('taxRate').value = fromDraftNum(draft.taxRate);
+    document.getElementById('otherIncome').value = fromDraftNum(draft.otherIncome);
+    document.getElementById('savingsGoal').value = fromDraftNum(draft.savingsGoal);
     document.getElementById('goalDate').value = draft.goalDate || '';
 
     if(draft.fixedValues){
         const fixedInputs = document.querySelectorAll('#fixedExpenses .expense-value');
-        draft.fixedValues.forEach(function(v, i){ if(fixedInputs[i]) fixedInputs[i].value = v; });
+        draft.fixedValues.forEach(function(v, i){ if(fixedInputs[i]) fixedInputs[i].value = fromDraftNum(v); });
     }
 
     if(draft.variableRows && draft.variableRows.length){
@@ -486,19 +613,17 @@ function restoreDraft(){
         draft.variableRows.forEach(function(r){
             const row = document.createElement('div');
             row.className = 'expense-row';
+            const valueInput = '<input type="text" inputmode="decimal" autocomplete="off" class="expense-value num-input" placeholder="' + i18n[currentLang].moneyPh + '" data-i18n-ph="moneyPh" value="' + escapeHtml(fromDraftNum(r.value)) + '">';
             if(r.key){
-                row.innerHTML = '<input type="text" data-i18n-val="' + r.key + '" value="' + escapeHtml(i18n[currentLang][r.key] || r.label) + '" readonly>' +
-                    '<input type="number" class="expense-value" placeholder="0.00" min="0" value="' + escapeHtml(r.value) + '">';
+                row.innerHTML = '<input type="text" data-i18n-val="' + r.key + '" value="' + escapeHtml(i18n[currentLang][r.key] || r.label) + '" readonly tabindex="-1">' + valueInput;
             } else {
-                row.innerHTML = '<input type="text" placeholder="' + i18n[currentLang].expenseName + '" value="' + escapeHtml(r.label) + '">' +
-                    '<input type="number" class="expense-value" placeholder="0.00" min="0" value="' + escapeHtml(r.value) + '">' +
-                    '<button class="remove-x" onclick="this.parentElement.remove(); saveDraft();">✕</button>';
+                row.innerHTML = '<input type="text" maxlength="30" placeholder="' + i18n[currentLang].expenseName + '" value="' + escapeHtml(r.label) + '">' + valueInput + removeBtnHtml();
             }
             container.appendChild(row);
         });
     }
 
-    calculate();
+    if(draft.showResults !== false) calculate();
 }
 
 document.addEventListener('input', saveDraft);
@@ -533,8 +658,11 @@ function startJourney(){
 function editUserName(){
     let current = '';
     try{ current = localStorage.getItem(USER_NAME_KEY) || ''; } catch(err){ /* ignore */ }
-    document.getElementById('userNameInput').value = current;
+    const input = document.getElementById('userNameInput');
+    input.value = current;
     document.getElementById('welcomeOverlay').classList.remove('hidden');
+    input.focus();
+    input.select();
 }
 
 function initUserSetup(){
@@ -551,7 +679,19 @@ document.getElementById('userNameInput').addEventListener('keydown', function(e)
     if(e.key === 'Enter') startJourney();
 });
 
+// Enter in any field calculates the plan
+document.getElementById('appWrapper').addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && e.target.tagName === 'INPUT') calculate();
+});
+
+(function setGoalDateMin(){
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const pad = function(n){ return String(n).padStart(2, '0'); };
+    document.getElementById('goalDate').min = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+})();
+
 initUserSetup();
-populateCountries();
-onCountryChange();
+setLang('es');
 restoreDraft();
+draftRestored = true;

@@ -65,6 +65,13 @@ body {
 .goal-row input:focus, .goal-row select:focus { outline: 2px solid #c9a227; }
 .goal-row input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1); }
 .goal-field-label { font-size: 10.5px; color: #a89a78; margin-bottom: 4px; display: block; }
+.goal-field-note { font-size: 10px; color: #7d7a6e; margin-top: 4px; display: block; }
+.goal-row input { width: 100%; }
+.goal-amount-wrap { display: flex; align-items: center; background: rgba(255,255,255,0.1); border-radius: 9px; }
+.goal-amount-wrap:focus-within { outline: 2px solid #c9a227; }
+.goal-ccy { padding-left: 12px; color: #c9a227; font-weight: 700; font-size: 14px; white-space: nowrap; }
+.goal-row .goal-amount-wrap input { background: transparent; }
+.goal-row .goal-amount-wrap input:focus { outline: none; }
 
 .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 
@@ -84,11 +91,11 @@ body {
 .expense-subtitle { font-size: 11px; font-weight: 700; color: #8a7f68; text-transform: uppercase; letter-spacing: 0.6px; margin: 14px 0 8px; }
 
 .expense-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-.expense-row input[type=text] { flex: 1.2; padding: 9px 10px; border: 2px solid #e4d9bc; border-radius: 8px; font-size: 12.5px; background: #f7f2e6; color: #5c5440; }
-.expense-row input[type=number] { flex: 1; padding: 9px 10px; border: 2px solid #e4d9bc; border-radius: 8px; font-size: 12.5px; }
+.expense-row input[type=text]:not(.expense-value) { flex: 1.2; padding: 9px 10px; border: 2px solid #e4d9bc; border-radius: 8px; font-size: 12.5px; background: #f7f2e6; color: #5c5440; }
+.expense-row .expense-value { flex: 1; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; color: #14213d; padding: 9px 10px; border: 2px solid #e4d9bc; border-radius: 8px; font-size: 12.5px; }
 .expense-row input:focus { outline:none; border-color: #c9a227; }
 
-.remove-x { background: #ffe4e4; color: #e05c5c; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-weight: 700; font-size: 12px; }
+.remove-x { flex-shrink: 0; background: #ffe4e4; color: #e05c5c; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-weight: 700; font-size: 12px; }
 
 .add-expense { width: 100%; padding: 10px; background: #f1ead8; color: #14213d; border: 2px dashed #c9b98c; border-radius: 9px; cursor: pointer; font-weight: 700; font-size: 12.5px; margin-top: 8px; transition: all 0.2s; }
 .add-expense:hover { background: #e4d9bc; }
@@ -97,7 +104,7 @@ body {
     width: 100%; padding: 14px; margin-top: 22px;
     background: linear-gradient(135deg, #c9a227, #8c6f1a);
     color: white; border: none; border-radius: 11px; font-size: 14.5px; font-weight: 700; cursor: pointer;
-    box-shadow: 0 10px 25px rgba(74,158,255,0.3); transition: transform 0.2s;
+    box-shadow: 0 10px 25px rgba(140,111,26,0.3); transition: transform 0.2s;
 }
 .calc-btn:hover { transform: translateY(-2px); }
 
@@ -117,7 +124,7 @@ body {
 .stat-box.period { border-left-color: #c9a227; background: #f7f0da; }
 
 .stat-label { font-size: 10.5px; color: #8a7f68; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-.stat-value { font-size: 21px; font-weight: 800; color: #14213d; }
+.stat-value { font-size: 21px; font-weight: 800; color: #14213d; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .stat-box.income .stat-value { color: #22a559; }
 .stat-box.expense .stat-value { color: #e0433f; }
 .stat-box.savings .stat-value { color: #b8890a; }
@@ -147,9 +154,12 @@ body {
 .timeline-title { font-size: 12px; font-weight: 700; color: #14213d; margin-bottom: 12px; }
 .timeline-row { display:flex; justify-content:space-between; align-items:center; padding: 12px 14px; border-radius: 10px; background: #f4efe2; margin-bottom: 8px; }
 .timeline-period { font-size: 12.5px; color: #5c5440; font-weight: 600; }
-.timeline-value { font-size: 14px; font-weight: 800; color: #14213d; }
+.timeline-value { font-size: 14px; font-weight: 800; color: #14213d; font-variant-numeric: tabular-nums; }
 
 .placeholder { text-align: center; padding: 50px 20px; color: #8a7f68; font-size: 13.5px; background: #f4efe2; border-radius: 12px; border: 2px dashed #e4d9bc; }
+
+button:focus-visible { outline: 2px solid #c9a227; outline-offset: 2px; }
+.field input.num-input { font-variant-numeric: tabular-nums; }
 
 .alert-box { background: #fff0f0; border-left: 4px solid #e05c5c; border-radius: 10px; padding: 14px; color: #c94040; font-size: 12.5px; }
 

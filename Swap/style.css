@@ -71,6 +71,8 @@ body {
 }
 .refresh-btn:hover { color: #f4d58d; border-color: rgba(212,175,55,0.4); }
 .refresh-btn:active { transform: rotate(180deg); }
+.refresh-btn.spinning { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .swap-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 18px; margin-bottom: 14px; position: relative; }
 .swap-label { font-size: 11px; color: #7d94a8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
@@ -104,6 +106,8 @@ body {
 .ccy-list { max-height: 240px; overflow-y: auto; }
 .ccy-item { display: flex; align-items: center; gap: 8px; padding: 9px 12px; cursor: pointer; font-size: 12.5px; }
 .ccy-item:hover, .ccy-item.highlighted { background: rgba(212,175,55,0.12); }
+.ccy-item.selected .name { color: #f4d58d; }
+.ccy-item.selected::after { content: '✓'; margin-left: auto; color: #d4af37; font-weight: 700; }
 .ccy-item .flag { font-size: 18px; }
 .ccy-item .code { font-weight: 700; color: #f4d58d; min-width: 34px; }
 .ccy-item .name { color: #c3d1de; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -115,7 +119,7 @@ body {
 .amount-input::-webkit-outer-spin-button, .amount-input::-webkit-inner-spin-button { -webkit-appearance: none; margin:0; }
 
 .swap-btn-wrap { display:flex; justify-content:center; margin: -6px 0; position: relative; z-index: 2; }
-.swap-btn { width: 38px; height: 38px; background: linear-gradient(135deg, #d4af37, #b8942c); border: 3px solid #0e1f30; border-radius: 50%; display: flex; align-items:center; justify-content:center; cursor: pointer; font-size: 15px; color: #0e1f30; font-weight: 700; transition: transform 0.3s; }
+.swap-btn { padding: 0; font-family: inherit; width: 38px; height: 38px; background: linear-gradient(135deg, #d4af37, #b8942c); border: 3px solid #0e1f30; border-radius: 50%; display: flex; align-items:center; justify-content:center; cursor: pointer; font-size: 15px; color: #0e1f30; font-weight: 700; transition: transform 0.3s; }
 .swap-btn:hover { transform: rotate(180deg); }
 
 .currency-name-hint { text-align: center; font-size: 11px; color: #5d7387; margin-top: -6px; margin-bottom: 10px; }
@@ -127,7 +131,16 @@ body {
 .result-label { font-size: 11px; color: #7d94a8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
 .result-amount { font-size: 27px; font-weight: 700; color: #f4d58d; word-break: break-word; }
 .result-sub { font-size: 12px; color: #5d7387; margin-top: 6px; }
-.timestamp { text-align:center; font-size: 11px; color: #4a5f70; margin-top: 18px; }
+.timestamp { text-align:center; font-size: 11px; color: #4a5f70; margin-top: 18px; min-height: 13px; }
+.home-link { display: block; margin: 8px auto 0; background: none; border: none; color: #5d7387; font-size: 11px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; font-family: inherit; }
+.home-link:hover { color: #f4d58d; }
+
+.rate-info { min-height: 44px; }
+.amount-input { font-variant-numeric: tabular-nums; }
+.result-amount { font-variant-numeric: tabular-nums; }
+
+button:focus-visible, .ccy-trigger:focus-visible { outline: 2px solid #f4d58d; outline-offset: 2px; }
+.amount-wrap:focus-within { box-shadow: 0 0 0 2px rgba(212,175,55,0.45); }
 
 @media (max-width:480px){
     .card{ padding:26px 18px; }

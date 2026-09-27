@@ -25,13 +25,13 @@
 
     <div class="home-ccy-field">
         <div class="ccy-dropdown" id="homeDropdown" style="width:100%;">
-            <div class="ccy-trigger" onclick="toggleDropdown('home')" style="width:100%;">
+            <div class="ccy-trigger" role="button" tabindex="0" onclick="toggleDropdown('home')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDropdown('home');}" style="width:100%;">
                 <span class="ccy-trigger-flag" id="homeTriggerFlag">🇺🇸</span>
                 <span class="ccy-trigger-text" id="homeTriggerText">USD</span>
                 <span class="ccy-trigger-chevron">▼</span>
             </div>
             <div class="ccy-panel" id="homePanel" style="width:100%;">
-                <input type="text" class="ccy-search" id="homeSearch" placeholder="Buscar..." oninput="filterList('home')">
+                <input type="text" class="ccy-search" id="homeSearch" placeholder="Buscar moneda o país..." oninput="filterList('home')" onkeydown="onSearchKey(event,'home')" autocomplete="off">
                 <div class="ccy-list" id="homeList"></div>
             </div>
         </div>
@@ -48,11 +48,11 @@
 
     <div class="header">
         <div class="icon">💱</div>
-        <h1 data-i18n="title">CAMBIO DE DIVISAS</h1>
+        <h1 data-i18n="title">SWAP</h1>
         <p data-i18n="subtitle">Tasas de mercado en tiempo real, sin comisión</p>
         <div class="live-badge-row">
             <div class="live-badge" id="liveBadge"><span class="live-dot"></span><span id="liveText">TASA EN VIVO</span></div>
-            <button class="refresh-btn" id="refreshBtn" onclick="fetchLiveRates()" aria-label="Actualizar tasas / Refresh rates">⟳</button>
+            <button class="refresh-btn" id="refreshBtn" onclick="fetchLiveRates()" data-i18n-aria="refresh" aria-label="Actualizar tasas" title="Actualizar tasas">⟳</button>
         </div>
     </div>
 
@@ -60,57 +60,58 @@
         <div class="swap-label" data-i18n="youSend">Envías</div>
         <div class="currency-row">
             <div class="ccy-dropdown" id="fromDropdown">
-                <div class="ccy-trigger" onclick="toggleDropdown('from')">
+                <div class="ccy-trigger" role="button" tabindex="0" onclick="toggleDropdown('from')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDropdown('from');}">
                     <span class="ccy-trigger-flag" id="fromTriggerFlag">🇺🇸</span>
                     <span class="ccy-trigger-text" id="fromTriggerText">USD</span>
                     <span class="ccy-trigger-chevron">▼</span>
                 </div>
                 <div class="ccy-panel" id="fromPanel">
-                    <input type="text" class="ccy-search" id="fromSearch" placeholder="Buscar..." oninput="filterList('from')">
+                    <input type="text" class="ccy-search" id="fromSearch" placeholder="Buscar moneda o país..." oninput="filterList('from')" onkeydown="onSearchKey(event,'from')" autocomplete="off">
                     <div class="ccy-list" id="fromList"></div>
                 </div>
             </div>
             <div class="amount-wrap">
-                <input type="number" class="amount-input" id="amount" placeholder="0.00" value="100" min="0" step="0.01">
+                <input type="text" inputmode="decimal" autocomplete="off" class="amount-input" id="amount" placeholder="0" value="100">
             </div>
         </div>
     </div>
     <div class="currency-name-hint" id="fromNameHint">Dólar EE.UU.</div>
 
     <div class="swap-btn-wrap">
-        <div class="swap-btn" onclick="swapCurrencies()">⇅</div>
+        <button class="swap-btn" onclick="swapCurrencies()" data-i18n-aria="swapLabel" aria-label="Intercambiar monedas" title="Intercambiar monedas">⇅</button>
     </div>
 
     <div class="swap-box">
         <div class="swap-label" data-i18n="theyReceive">Reciben</div>
         <div class="currency-row">
             <div class="ccy-dropdown" id="toDropdown">
-                <div class="ccy-trigger" onclick="toggleDropdown('to')">
+                <div class="ccy-trigger" role="button" tabindex="0" onclick="toggleDropdown('to')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDropdown('to');}">
                     <span class="ccy-trigger-flag" id="toTriggerFlag">🇪🇺</span>
                     <span class="ccy-trigger-text" id="toTriggerText">EUR</span>
                     <span class="ccy-trigger-chevron">▼</span>
                 </div>
                 <div class="ccy-panel" id="toPanel">
-                    <input type="text" class="ccy-search" id="toSearch" placeholder="Buscar..." oninput="filterList('to')">
+                    <input type="text" class="ccy-search" id="toSearch" placeholder="Buscar moneda o país..." oninput="filterList('to')" onkeydown="onSearchKey(event,'to')" autocomplete="off">
                     <div class="ccy-list" id="toList"></div>
                 </div>
             </div>
             <div class="amount-wrap">
-                <input type="text" class="amount-input" id="convertedDisplay" readonly value="0.00">
+                <input type="text" class="amount-input" id="convertedDisplay" readonly tabindex="-1" value="—">
             </div>
         </div>
     </div>
     <div class="currency-name-hint" id="toNameHint">Euro</div>
 
-    <div class="rate-info" id="rateInfo">1 USD = <span>0.9200 EUR</span></div>
+    <div class="rate-info" id="rateInfo"></div>
 
     <div class="result-box">
         <div class="result-label" data-i18n="totalReceive">Total a recibir</div>
-        <div class="result-amount" id="finalResult">€0.00</div>
+        <div class="result-amount" id="finalResult">—</div>
         <div class="result-sub" data-i18n="noFees">Sin comisiones · Sin cargos ocultos · Tasa real</div>
     </div>
 
-    <div class="timestamp" id="timestamp">Tasa actualizada hoy</div>
+    <div class="timestamp" id="timestamp"></div>
+    <button class="home-link" onclick="changeHomeCurrency()" data-i18n="changeHome">Cambiar moneda local</button>
 </div>
 
 <script src="script.js"></script>
