@@ -389,11 +389,14 @@ class App:
         card = self.draw_paper()
         test = self.test
         left = test.time_left() if test.started_at else test.duration
-        self.draw_text(f"{int(left + 0.999)}", "big", RED if left <= 5 and test.started_at else INK, (card.left + 110, card.top + 60), "midleft")
+        clock_color = RED if left <= 5 and test.started_at else INK
+        self.draw_text(f"{int(left + 0.999)}", "big", clock_color, (card.left + 110, card.top + 60), "midleft")
         self.draw_text(self.t("time_left"), "small", SOFT, (card.left + 110, card.top + 88), "midleft")
         if test.started_at and test.elapsed() >= LIVE_STATS_AFTER:
-            self.draw_text(f"{fmt_num(test.wpm(), self.lang)} {self.t('wpm')}", "mid", INK, (card.right - 60, card.top + 62), "midright")
-            self.draw_text(f"{fmt_num(test.accuracy(), self.lang)} % {self.t('accuracy')}", "small", SOFT, (card.right - 60, card.top + 90), "midright")
+            speed = f"{fmt_num(test.wpm(), self.lang)} {self.t('wpm')}"
+            accuracy = f"{fmt_num(test.accuracy(), self.lang)} % {self.t('accuracy')}"
+            self.draw_text(speed, "mid", INK, (card.right - 60, card.top + 62), "midright")
+            self.draw_text(accuracy, "small", SOFT, (card.right - 60, card.top + 90), "midright")
 
         lines = self.layout_lines()
         caret = len(test.typed)
@@ -418,7 +421,8 @@ class App:
                     caret_pos = (x, y)
                 self.screen.blit(surf, (x, y))
                 if idx < len(test.typed) and test.typed[idx] != ch:
-                    pygame.draw.line(self.screen, RED, (x, y + surf.get_height() - 2), (x + surf.get_width(), y + surf.get_height() - 2), 2)
+                    underline_y = y + surf.get_height() - 2
+                    pygame.draw.line(self.screen, RED, (x, underline_y), (x + surf.get_width(), underline_y), 2)
                 x += surf.get_width()
         if caret_pos and (int(time.monotonic() * 2.2) % 2 == 0 or test.started_at is None):
             cx, cy = caret_pos
@@ -438,8 +442,10 @@ class App:
             stamp = self.fonts["big"].render(self.t("new_record"), True, RED)
             stamp = pygame.transform.rotate(stamp, 8)
             self.screen.blit(stamp, stamp.get_rect(center=(card.right - 170, card.top + 140)))
-        self.draw_text(f"{fmt_num(r['accuracy'], self.lang, 1)} % {self.t('accuracy')}", "big", GREEN if r["accuracy"] >= 95 else INK, (WIDTH // 2, card.top + 300))
-        self.draw_text(self.t("chars", ok=fmt_num(r["correct"], self.lang), bad=fmt_num(r["errors"], self.lang)), "small", SOFT, (WIDTH // 2, card.top + 350))
+        accuracy = f"{fmt_num(r['accuracy'], self.lang, 1)} % {self.t('accuracy')}"
+        self.draw_text(accuracy, "big", GREEN if r["accuracy"] >= 95 else INK, (WIDTH // 2, card.top + 300))
+        chars = self.t("chars", ok=fmt_num(r["correct"], self.lang), bad=fmt_num(r["errors"], self.lang))
+        self.draw_text(chars, "small", SOFT, (WIDTH // 2, card.top + 350))
         self.draw_text(self.t("raw", n=fmt_num(r["raw"], self.lang)), "small", SOFT, (WIDTH // 2, card.top + 376))
         self.draw_text(self.t("result_hint"), "mid", INK, (WIDTH // 2, card.bottom - 60))
 

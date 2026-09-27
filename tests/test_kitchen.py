@@ -93,7 +93,9 @@ class KitchenTests(unittest.TestCase):
 
     def test_orders_move_forward_only(self):
         oid = self.client.post("/api/orders", json=order()).json()["id"]
-        patch = lambda status: self.client.patch(f"/api/orders/{oid}", json={"status": status}, headers=self.auth)
+        def patch(status):
+            return self.client.patch(f"/api/orders/{oid}", json={"status": status}, headers=self.auth)
+
         self.assertEqual(patch("ready").status_code, 409)  # can't skip preparing
         self.assertEqual(patch("preparing").json()["status"], "preparing")
         self.assertEqual(patch("ready").json()["status"], "ready")

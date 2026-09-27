@@ -50,3 +50,5 @@ Every push runs the test suite on GitHub Actions:
 
 - **Python:** the sudoku engine and the Kitchen API (`python -m pytest tests`).
 - **Browser:** Playwright drives every web app and web game like a visitor would, plus a full-stack test that places an order in Apron and follows it on the kitchen board (`npm install && npx playwright test`).
+- **Accessibility:** every page and its main states are checked against WCAG 2.1 AA with axe, the engine behind Lighthouse's accessibility score.
+- **Lint:** Python code is checked with [ruff](https://docs.astral.sh/ruff/) (`ruff check .`).

@@ -7,14 +7,16 @@ on:
 
 jobs:
   python:
-    name: Python (sudoku engine, Kitchen API, games compile)
+    name: Python (lint, sudoku engine, Kitchen API, games compile)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-      - run: pip install -r Kitchen/requirements.txt httpx pytest
+      - run: pip install -r Kitchen/requirements.txt httpx pytest ruff
+      - name: Lint
+        run: ruff check .
       - name: Unit tests
         run: python -m pytest tests -v
       - name: Games compile

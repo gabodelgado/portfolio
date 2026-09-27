@@ -1,0 +1,14 @@
+# The games and the sudoku engine support Python 3.9, so the linter targets it too.
+target-version = "py39"
+line-length = 130
+
+[lint]
+# pycodestyle, pyflakes, import order, bugbear, pyupgrade (3.9-safe), simplify
+select = ["E", "W", "F", "I", "B", "UP", "SIM"]
+ignore = [
+    "SIM108",  # a ternary isn't always clearer than a short if/else
+    "SIM905",  # long word lists read better as one string split on spaces
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["E402"]  # tests add the project folders to sys.path before importing

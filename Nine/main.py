@@ -20,7 +20,6 @@ import os
 import time
 
 import pygame
-
 import sudoku
 
 WIDTH, HEIGHT = 1000, 680
@@ -483,8 +482,9 @@ class App:
             width = 3 if k % 3 == 0 else 1
             color = THICK if k % 3 == 0 else THIN
             if 0 < k < 9:
-                pygame.draw.line(self.screen, color, (BOARD_X, BOARD_Y + k * CELL), (BOARD_X + BOARD - 1, BOARD_Y + k * CELL), width)
-                pygame.draw.line(self.screen, color, (BOARD_X + k * CELL, BOARD_Y), (BOARD_X + k * CELL, BOARD_Y + BOARD - 1), width)
+                edge = k * CELL
+                pygame.draw.line(self.screen, color, (BOARD_X, BOARD_Y + edge), (BOARD_X + BOARD - 1, BOARD_Y + edge), width)
+                pygame.draw.line(self.screen, color, (BOARD_X + edge, BOARD_Y), (BOARD_X + edge, BOARD_Y + BOARD - 1), width)
         pygame.draw.rect(self.screen, THICK, board_rect, 3, border_radius=10)
 
     def draw_button(self, b, mouse):

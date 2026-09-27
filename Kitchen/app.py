@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
-from typing import Dict, List, Literal, Optional
+from typing import Literal, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,7 +42,7 @@ TIP_PERCENTS = (15, 18, 20)
 ORDERS_PER_MINUTE = 10  # per IP, to keep bots from flooding the kitchen
 
 # Same dishes and prices as Apron's sample menu, in cents to avoid float rounding
-MENU: Dict[int, dict] = {
+MENU: dict[int, dict] = {
     1:  {"es": "Pizza Margherita",     "en": "Margherita Pizza", "emoji": "🍕", "price": 1499},
     2:  {"es": "Ensalada César",       "en": "Caesar Salad",     "emoji": "🥗", "price": 999},
     3:  {"es": "Salmón a la Parrilla", "en": "Grilled Salmon",   "emoji": "🐟", "price": 2499},
@@ -172,7 +172,7 @@ class Tip(BaseModel):
 class NewOrder(BaseModel):
     type: Literal["pickup", "delivery"]
     customer: Customer
-    items: List[Item] = Field(min_length=1, max_length=30)
+    items: list[Item] = Field(min_length=1, max_length=30)
     # The real local sales tax rate is entered by the restaurant, never guessed
     tax_rate_pct: Decimal = Field(ge=0, le=100, max_digits=6, decimal_places=3)
     tip: Tip = Tip()
@@ -191,7 +191,7 @@ class StatusChange(BaseModel):
 
 # ---------- pricing ----------
 def price(order: NewOrder) -> dict:
-    qty_by_dish: Dict[int, int] = {}
+    qty_by_dish: dict[int, int] = {}
     for item in order.items:
         qty_by_dish[item.id] = qty_by_dish.get(item.id, 0) + item.qty
     subtotal = sum(MENU[d]["price"] * q for d, q in qty_by_dish.items())
@@ -215,7 +215,7 @@ def order_number(order_id: int) -> str:
     return f"#{1000 + order_id}"
 
 
-def serialize(row: sqlite3.Row, items: List[sqlite3.Row]) -> dict:
+def serialize(row: sqlite3.Row, items: list[sqlite3.Row]) -> dict:
     return {
         "id": row["id"],
         "number": order_number(row["id"]),
@@ -278,7 +278,7 @@ def require_token(authorization: str = Header(default="")):
         raise HTTPException(status_code=401, detail="wrong or missing kitchen password")
 
 
-_recent: Dict[str, List[float]] = {}
+_recent: dict[str, list[float]] = {}
 
 
 def rate_limit(request: Request):
